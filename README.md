@@ -2,21 +2,25 @@
 
 ARM **aarch64** chiplariga moʻljallangan, **Rust** tilida yozilayotgan operatsion tizim. Asosiy maqsad — **mobile-first**, lekin tashqi monitor + klaviatura + sichqoncha ulanganda **desktop** rejimida ishlay oladigan **konvergent** OS.
 
-> Holati: **Faza 0–7 yakunlandi.** To'liq konvergent shell — 6 ta app (Welcome, SysMon, Keyboard, Terminal, Paint, Clock), gradiyent fonlar, yumaloq panellar, vizual app ikonalari, status bar (wifi/batareya/soat). Esc bilan **Mobile** rejimga o'tish — telefon shakli, notch, dock.
+> Holati: **Faza 0–8 yakunlandi.** macOS-uslubli desktop (menu bar + window with traffic lights + bottom dock) va iOS-uslubli mobile (telefon shakli, notch, home grid, app icon dock). **10 ta app**: Welcome, Activity, Calculator, Keys, Terminal, Paint, Files, Music, Clock, Settings.
 
-### Desktop rejimi
+### Desktop rejimi (macOS uslubli)
 
-| Welcome | SysMon | Keyboard |
+| Welcome | Activity | Calculator |
 |---|---|---|
-| ![](dist/shot-01-desktop-welcome.png) | ![](dist/shot-02-desktop-sysmon.png) | ![](dist/shot-03-desktop-keyboard.png) |
-| **Terminal** | **Paint** | **Clock** |
-| ![](dist/shot-04-desktop-terminal.png) | ![](dist/shot-05-desktop-paint.png) | ![](dist/shot-06-desktop-clock.png) |
+| ![](dist/shot-01-desktop-welcome.png) | ![](dist/shot-02-desktop-activity.png) | ![](dist/shot-03-desktop-calculator.png) |
+| **Keyboard** | **Terminal** | **Paint** |
+| ![](dist/shot-04-desktop-keyboard.png) | ![](dist/shot-05-desktop-terminal.png) | ![](dist/shot-06-desktop-paint.png) |
+| **Files** | **Music** | **Clock** |
+| ![](dist/shot-07-desktop-files.png) | ![](dist/shot-08-desktop-music.png) | ![](dist/shot-09-desktop-clock.png) |
+| **Settings** | | |
+| ![](dist/shot-10-desktop-settings.png) | | |
 
-### Mobile rejimi (Esc bilan)
+### Mobile rejimi (iOS uslubli, Esc bilan)
 
-| Mobile / Clock | Mobile / Welcome |
-|---|---|
-| ![](dist/shot-07-mobile-clock.png) | ![](dist/shot-08-mobile-welcome.png) |
+| Home Screen | Welcome | Music | Clock |
+|---|---|---|---|
+| ![](dist/shot-11-mobile-home.png) | ![](dist/shot-12-mobile-welcome.png) | ![](dist/shot-13-mobile-music.png) | ![](dist/shot-14-mobile-clock.png) |
 
 ## Yoʻl xaritasi
 
@@ -28,7 +32,8 @@ ARM **aarch64** chiplariga moʻljallangan, **Rust** tilida yozilayotgan operatsi
 - [x] **Faza 5** — ramfb framebuffer (800×600 XRGB8888), 8×8 font matn rendering
 - [x] **Faza 6** — virtio-input (klaviatura + tablet/sichqoncha), live event loop, dirty-flag redraw
 - [x] **Faza 6.5** — Konvergent shell: top bar + side launcher + main content area, TAB bilan almashish
-- [x] **Faza 7** — 6 ta app: Welcome, SysMon (gauges), Keyboard (visual QWERTY), Terminal (REPL: help/echo/clear/ps/mem/uname/about), Paint (Bresenham strokes), Clock (analog dial). Mobile/Desktop layout (Esc bilan). Gradiyent wallpaper, yumaloq panellar, soyalar, real grafik app ikonalari, wifi/batareya status ikonalari.
+- [x] **Faza 7** — 6 ta app: Welcome, SysMon, Keyboard, Terminal, Paint, Clock. Mobile/Desktop layout. Gradient wallpaper, yumaloq panellar.
+- [x] **Faza 8** — Modernizatsiya: rangli gradient app ikonalar (iOS/macOS uslubli), macOS-uslubli desktop (menu bar + window with traffic lights + markazlashgan dock), iOS-uslubli mobile (telefon notch + home grid + dock). Yangi 4 ta app: **Calculator** (functional), **Files** (file browser), **Music** (player UI), **Settings** (toggles + sliders). Jami **10 app**.
 - [ ] **Faza 7** — Raspberry Pi 4/5 portlash
 - [ ] **Faza 8** — Userspace, ELF loader, syscalls
 - [ ] **Faza 9** — Adaptiv shell va GUI (mobile ↔ desktop konvergensiyasi)

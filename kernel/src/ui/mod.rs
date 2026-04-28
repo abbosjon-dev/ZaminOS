@@ -32,8 +32,17 @@ impl Layout {
     }
 }
 
+#[derive(Clone, Copy, PartialEq)]
+pub enum MobileView {
+    /// Home screen — app grid.
+    Home,
+    /// App ichida.
+    InApp,
+}
+
 pub struct Shell {
     pub layout: Layout,
+    pub mobile_view: MobileView,
     pub current_app: App,
     pub uptime_ticks: u32,
     pub event_count: u32,
@@ -44,12 +53,17 @@ pub struct Shell {
     pub heap_size: usize,
     pub terminal: apps::terminal::TerminalState,
     pub paint: apps::paint::PaintState,
+    pub calculator: apps::calculator::CalcState,
+    pub files: apps::files::FilesState,
+    pub music: apps::music::MusicState,
+    pub settings: apps::settings::SettingsState,
 }
 
 impl Shell {
     pub fn new(width: u32, height: u32) -> Self {
         Self {
             layout: Layout::Desktop,
+            mobile_view: MobileView::Home,
             current_app: App::Welcome,
             uptime_ticks: 0,
             event_count: 0,
@@ -60,6 +74,10 @@ impl Shell {
             heap_size: 0,
             terminal: apps::terminal::TerminalState::new(),
             paint: apps::paint::PaintState::new(),
+            calculator: apps::calculator::CalcState::new(),
+            files: apps::files::FilesState::new(),
+            music: apps::music::MusicState::new(),
+            settings: apps::settings::SettingsState::new(),
         }
     }
 
@@ -74,19 +92,47 @@ impl Shell {
                 // Esc — layout almashtirish
                 if code == 1 {
                     self.layout = self.layout.toggle();
+                    if self.layout == Layout::Mobile {
+                        self.mobile_view = MobileView::Home;
+                    }
                     return true;
                 }
-                // TAB — keyingi app
+
+                // F1 — mobile rejimda "Home" tugmasi (app grid'ga qaytish)
+                if code == 59 && self.layout == Layout::Mobile {
+                    self.mobile_view = MobileView::Home;
+                    return true;
+                }
+
+                // Mobile Home rejimi: Tab cikl, Enter ishga tushirish
+                if self.layout == Layout::Mobile && self.mobile_view == MobileView::Home {
+                    if code == 15 {
+                        // TAB — keyingi app tanlash
+                        self.current_app = self.current_app.next();
+                        return true;
+                    }
+                    if code == 28 {
+                        // Enter — tanlangan appni ochish
+                        self.mobile_view = MobileView::InApp;
+                        return true;
+                    }
+                    return false;
+                }
+
+                // TAB — keyingi app (desktop yoki mobile InApp)
                 if code == 15 {
                     self.current_app = self.current_app.next();
                     return true;
                 }
 
-                // Joriy app keyni yutib qolishi mumkin (masalan terminal Enter).
-                if self.current_app == App::Terminal {
-                    if self.terminal.handle_key(code) {
-                        return true;
-                    }
+                // Joriy app keyni yutib qolishi mumkin.
+                match self.current_app {
+                    App::Terminal => if self.terminal.handle_key(code) { return true; },
+                    App::Calculator => if self.calculator.handle_key(code) { return true; },
+                    App::Files => if self.files.handle_key(code) { return true; },
+                    App::Music => if self.music.handle_key(code) { return true; },
+                    App::Settings => if self.settings.handle_key(code) { return true; },
+                    _ => {}
                 }
 
                 if let Some(ch) = input::keycode_to_char(code) {
@@ -160,85 +206,132 @@ impl Shell {
         let w = fb.width();
         let h = fb.height();
 
-        // Vertikal gradiyent fon (chuqur ko'k -> yanada chuqurroq)
-        fb.vgradient(0, 0, w, h, Color::rgb(0x10, 0x1d, 0x36), Color::rgb(0x06, 0x0c, 0x1a));
+        // ---- Wallpaper: ko'k -> binafsha gradient ----
+        fb.vgradient(0, 0, w, h, Color::rgb(0x1e, 0x1a, 0x4a), Color::rgb(0x05, 0x0a, 0x1e));
 
-        // Top bar — gradiyent bilan
-        const TOP_H: u32 = 36;
-        fb.vgradient(0, 0, w, TOP_H, Color::rgb(0x1c, 0x2c, 0x4a), Color::rgb(0x12, 0x1e, 0x36));
-        fb.hline(0, TOP_H, w, Color::ZAMIN_FG);
+        // ---- Menu bar (macOS-uslubli) ----
+        const MENU_H: u32 = 28;
+        fb.fill_rect(0, 0, w, MENU_H, Color::rgb(0x14, 0x18, 0x28));
+        fb.hline(0, MENU_H, w, Color::rgb(0x30, 0x36, 0x4a));
 
-        // Logo qutisi
-        fb.fill_rect(8, 6, 24, 24, Color::ZAMIN_FG);
-        fb.draw_text(12, 10, "Z", Color::ZAMIN_BG, 2);
-        fb.draw_text(40, 10, "ZaminOS", Color::WHITE, 2);
+        // Apple-style logo qutisi (sariq Z)
+        fb.fill_rect(10, 5, 18, 18, Color::ZAMIN_FG);
+        fb.draw_text(13, 9, "Z", Color::ZAMIN_BG, 2);
 
-        let app_text = format!("//  {}", self.current_app.label());
-        fb.draw_text(190, 14, &app_text, Color::ACCENT, 1);
+        // App name (bold)
+        fb.draw_text(38, 8, "ZaminOS", Color::WHITE, 2);
 
-        // Status icons (o'ng tomon): wifi, batareya, soat
-        let mut sx = w - 12;
-        // Soat
-        let clock = format!("{:02}:{:02}", self.uptime_ticks / 60, self.uptime_ticks % 60);
-        sx = sx.saturating_sub((clock.len() as u32) * 8);
-        fb.draw_text(sx, 14, &clock, Color::WHITE, 1);
-        // Batareya
-        sx = sx.saturating_sub(34);
-        draw_battery_icon(fb, sx, 13);
-        // Wi-Fi
-        sx = sx.saturating_sub(28);
-        draw_wifi_icon(fb, sx, 13);
-        // Layout indicator
-        sx = sx.saturating_sub(80);
-        fb.draw_text(sx, 14, "[ DESKTOP ]", Color::ZAMIN_FG, 1);
-
-        // Side panel — gradiyent
-        const PANEL_W: u32 = 100;
-        fb.vgradient(0, TOP_H + 1, PANEL_W, h - TOP_H - 1,
-            Color::rgb(0x10, 0x1c, 0x32), Color::rgb(0x06, 0x0e, 0x1c));
-        fb.vline(PANEL_W, TOP_H + 1, h - TOP_H - 1, Color::ZAMIN_FG);
-
-        let apps = App::all();
-        let mut iy = TOP_H + 8;
-        for app in apps.iter() {
-            let active = *app == self.current_app;
-            let (bg, fg) = if active {
-                (Color::ZAMIN_FG, Color::ZAMIN_BG)
-            } else {
-                (Color::rgb(0x14, 0x22, 0x3a), Color::WHITE)
-            };
-            // Soya
-            fb.shadow_rect(10, iy, PANEL_W - 20, 60, Color::rgb(0x02, 0x06, 0x10));
-            // Tugma
-            fb.round_rect(10, iy, PANEL_W - 20, 60, 8, bg);
-            // Active uchun yorqinroq chiziq tepasida
-            if active {
-                fb.fill_rect(10, iy, 4, 60, Color::rgb(0xff, 0xe0, 0x55));
-            }
-            draw_app_icon(fb, *app, 34, iy + 6, fg, 4);
-            fb.draw_text(14, iy + 44, app.label(), fg, 1);
-            iy += 70;
+        // App menus
+        let menu_items = ["File", "Edit", "View", "Window", "Help"];
+        let mut mx = 168u32;
+        for item in menu_items.iter() {
+            fb.draw_text(mx, 10, item, Color::rgb(0xc0, 0xc4, 0xd0), 1);
+            mx += (item.len() as u32) * 8 + 16;
         }
 
-        // Main area — soya + yumaloq panel
-        let main_x = PANEL_W + 12;
-        let main_y = TOP_H + 8;
-        let main_w = w - PANEL_W - 24;
-        let bot_h = 30;
-        let main_h = h - main_y - bot_h - 8;
+        // Status icons (o'ng)
+        let mut sx = w - 12;
+        let clock = format!("{:02}:{:02}", self.uptime_ticks / 60, self.uptime_ticks % 60);
+        sx = sx.saturating_sub((clock.len() as u32) * 8);
+        fb.draw_text(sx, 10, &clock, Color::WHITE, 1);
+        sx = sx.saturating_sub(34);
+        draw_battery_icon(fb, sx, 9);
+        sx = sx.saturating_sub(24);
+        draw_wifi_icon(fb, sx, 9);
+        sx = sx.saturating_sub(40);
+        fb.draw_text(sx, 10, "DESKTOP", Color::ZAMIN_FG, 1);
 
-        fb.shadow_rect(main_x, main_y, main_w, main_h, Color::rgb(0x02, 0x06, 0x10));
-        fb.round_rect(main_x, main_y, main_w, main_h, 10, Color::rgb(0x0a, 0x14, 0x26));
-        self.draw_app(fb, main_x, main_y, main_w, main_h);
+        // ---- Window (joriy app) ----
+        const DOCK_H: u32 = 76;
+        let win_x = 24u32;
+        let win_y = MENU_H + 18;
+        let win_w = w - 48;
+        let win_h = h - MENU_H - 18 - DOCK_H - 10;
 
-        // Bottom bar
-        let bot_y = h - bot_h;
-        fb.vgradient(0, bot_y, w, bot_h, Color::rgb(0x12, 0x1e, 0x36), Color::rgb(0x08, 0x10, 0x20));
-        fb.hline(0, bot_y, w, Color::ZAMIN_FG);
-        fb.draw_text(12, bot_y + 9,
-            "TAB: keyingi app    Esc: mobile/desktop    Tugmalarni bosib sinang",
-            Color::MUTED, 1,
+        // Soya
+        fb.shadow_rect(win_x, win_y + 4, win_w, win_h, Color::rgb(0x00, 0x00, 0x06));
+
+        // Window background (dark navy with rounded corners)
+        fb.round_rect(win_x, win_y, win_w, win_h, 10, Color::rgb(0x0a, 0x14, 0x26));
+
+        // Window title bar
+        const TITLE_H: u32 = 28;
+        // Top of window has its own slightly lighter band
+        // ... but only above content, with rounded top
+        for j in 0..TITLE_H {
+            let row_clip = if j < 10 {
+                let dy = (10 - j) as i32;
+                let dx2 = 100i32 - dy * dy;
+                10 - (isqrt(dx2.max(0) as u32) as i32).max(0)
+            } else { 0 };
+            let off = row_clip.max(0) as u32;
+            fb.fill_rect(
+                win_x + off, win_y + j,
+                win_w - 2 * off, 1,
+                Color::rgb(0x18, 0x22, 0x3c),
+            );
+        }
+        fb.hline(win_x, win_y + TITLE_H, win_w, Color::rgb(0x30, 0x36, 0x4a));
+
+        // Traffic light buttons (red/yellow/green)
+        let tl_y = win_y + 9;
+        let tl_r = 6u32;
+        let tl_x_red = win_x + 14;
+        let tl_x_yel = tl_x_red + 18;
+        let tl_x_grn = tl_x_yel + 18;
+        fb.fill_circle((tl_x_red + tl_r) as i32, (tl_y + tl_r) as i32, tl_r, Color::rgb(0xff, 0x5f, 0x57));
+        fb.fill_circle((tl_x_yel + tl_r) as i32, (tl_y + tl_r) as i32, tl_r, Color::rgb(0xfe, 0xbc, 0x2e));
+        fb.fill_circle((tl_x_grn + tl_r) as i32, (tl_y + tl_r) as i32, tl_r, Color::rgb(0x28, 0xc8, 0x40));
+
+        // Window title (centered)
+        let title = self.current_app.label();
+        let title_w = (title.len() as u32) * 8 * 2;
+        fb.draw_text(
+            win_x + (win_w.saturating_sub(title_w)) / 2,
+            win_y + 6,
+            title,
+            Color::WHITE,
+            2,
         );
+
+        // Window content area
+        let content_x = win_x + 1;
+        let content_y = win_y + TITLE_H + 1;
+        let content_w = win_w - 2;
+        let content_h = win_h - TITLE_H - 2;
+        self.draw_app(fb, content_x, content_y, content_w, content_h);
+
+        // ---- Dock (macOS-uslubli, pastda markazda) ----
+        let apps = App::all();
+        let n = apps.len() as u32;
+        let dock_icon = 56u32;
+        let dock_pad = 12u32;
+        let dock_gap = 8u32;
+        let dock_w = n * dock_icon + (n - 1) * dock_gap + 2 * dock_pad;
+        let dock_h_actual = dock_icon + 2 * dock_pad;
+        let dock_x = (w - dock_w) / 2;
+        let dock_y = h - dock_h_actual - 8;
+
+        // Dock fon (yarim shaffof dark)
+        fb.shadow_rect(dock_x, dock_y + 4, dock_w, dock_h_actual, Color::rgb(0x00, 0x00, 0x06));
+        fb.round_rect(dock_x, dock_y, dock_w, dock_h_actual, 16, Color::rgb(0x18, 0x22, 0x3c));
+
+        let mut ix = dock_x + dock_pad;
+        let iy = dock_y + dock_pad;
+        for app in apps.iter() {
+            let active = *app == self.current_app;
+            // Active uchun pastida nuqta
+            if active {
+                fb.fill_circle(
+                    (ix + dock_icon / 2) as i32,
+                    (iy + dock_icon + 6) as i32,
+                    2,
+                    Color::WHITE,
+                );
+            }
+            draw_app_icon_modern(fb, *app, ix, iy, dock_icon);
+            ix += dock_icon + dock_gap;
+        }
     }
 
     // -------------------- Mobile layout --------------------
@@ -295,54 +388,67 @@ impl Shell {
         sx = sx.saturating_sub(16);
         fb.draw_text(sx, sb_y, "5G", Color::WHITE, 1);
 
-        // App title bar
-        let tb_y = phone_y + 28;
-        fb.round_rect(phone_x + 8, tb_y, phone_w - 16, 28, 6, Color::rgb(0x14, 0x22, 0x3a));
-        // Icon
-        draw_app_icon(fb, self.current_app, phone_x + 12, tb_y + 4, Color::ZAMIN_FG, 2);
-        fb.draw_text(phone_x + 36, tb_y + 7, self.current_app.label(), Color::ZAMIN_FG, 2);
+        // Mobile view ga qarab content area:
+        //   Home  — app grid
+        //   InApp — joriy app + title bar
+        let dock_h = 76u32;
 
-        // Content area (telefon ichida)
-        let content_x = phone_x + 8;
-        let content_y = tb_y + 32;
-        let content_w = phone_w - 16;
-        let dock_h = 80u32;
-        let content_h = phone_h - (content_y - phone_y) - dock_h - 8;
+        match self.mobile_view {
+            MobileView::Home => {
+                // Status'tan keyin to'g'ridan-to'g'ri grid
+                let grid_y = phone_y + 26;
+                let grid_h = phone_h - 26 - dock_h - 8;
+                draw_home_grid(fb, phone_x + 8, grid_y, phone_w - 16, grid_h, self.current_app);
+            }
+            MobileView::InApp => {
+                // App title bar
+                let tb_y = phone_y + 28;
+                fb.round_rect(
+                    phone_x + 8, tb_y, phone_w - 16, 28, 6,
+                    Color::rgb(0x14, 0x22, 0x3a),
+                );
+                draw_app_icon_modern(fb, self.current_app, phone_x + 14, tb_y - 4, 36);
+                fb.draw_text(phone_x + 56, tb_y + 7, self.current_app.label(), Color::WHITE, 2);
+                // Home button (F1) hint
+                fb.draw_text(phone_x + phone_w - 50, tb_y + 9, "[F1]", Color::MUTED, 1);
 
-        fb.round_rect(content_x, content_y, content_w, content_h, 8, Color::rgb(0x08, 0x12, 0x22));
-        self.draw_app(fb, content_x, content_y, content_w, content_h);
+                let content_x = phone_x + 8;
+                let content_y = tb_y + 36;
+                let content_w = phone_w - 16;
+                let content_h = phone_h - (content_y - phone_y) - dock_h - 8;
+                fb.round_rect(
+                    content_x, content_y, content_w, content_h, 8,
+                    Color::rgb(0x08, 0x12, 0x22),
+                );
+                self.draw_app(fb, content_x, content_y, content_w, content_h);
+            }
+        }
 
         // Bottom dock — yumaloq
         let dock_y = phone_y + phone_h - dock_h;
-        fb.round_rect(phone_x + 8, dock_y, phone_w - 16, dock_h - 8, 12, Color::rgb(0x14, 0x22, 0x3a));
+        fb.round_rect(phone_x + 8, dock_y, phone_w - 16, dock_h - 8, 14, Color::rgb(0x14, 0x22, 0x3a));
 
         let apps = App::all();
         let n = apps.len() as u32;
-        let gap: u32 = 6;
-        let avail = phone_w - 16;
-        let icon_w = ((avail - (n - 1) * gap) / n).min(48);
+        let gap: u32 = 8;
+        let avail = phone_w - 24;
+        let icon_w = ((avail - (n - 1) * gap) / n).min(46);
         let total_w = n * icon_w + (n - 1) * gap;
         let mut ix = phone_x + phone_w.saturating_sub(total_w) / 2;
         let iy = dock_y + (dock_h - 8 - icon_w) / 2;
         for app in apps.iter() {
             let active = *app == self.current_app;
-            let (bg, fg) = if active {
-                (Color::ZAMIN_FG, Color::ZAMIN_BG)
-            } else {
-                (Color::rgb(0x0c, 0x18, 0x2c), Color::WHITE)
-            };
-            fb.round_rect(ix, iy, icon_w, icon_w, 6, bg);
-            // Vizual ikona — markazlashtirilgan
-            let icon_scale = if icon_w >= 40 { 4 } else { 3 };
-            let glyph_w = 8 * icon_scale;
-            draw_app_icon(
-                fb,
-                *app,
-                ix + icon_w.saturating_sub(glyph_w) / 2,
-                iy + icon_w.saturating_sub(glyph_w) / 2,
-                fg,
-                icon_scale,
-            );
+            // Active uchun pastida ko'rinadigan nuqta
+            if active {
+                fb.fill_circle(
+                    (ix + icon_w / 2) as i32,
+                    (iy + icon_w + 6) as i32,
+                    2,
+                    Color::WHITE,
+                );
+            }
+            // Rangli gradient ikon
+            draw_app_icon_modern(fb, *app, ix, iy, icon_w);
             ix += icon_w + gap;
         }
 
@@ -357,10 +463,14 @@ impl Shell {
         match self.current_app {
             App::Welcome => apps::welcome::draw(self, fb, x, y, w, h),
             App::SysMon => apps::sysmon::draw(self, fb, x, y, w, h),
+            App::Calculator => apps::calculator::draw(self, fb, x, y, w, h),
             App::Keyboard => apps::keyboard::draw(self, fb, x, y, w, h),
             App::Terminal => apps::terminal::draw(self, fb, x, y, w, h),
             App::Paint => apps::paint::draw(self, fb, x, y, w, h),
+            App::Files => apps::files::draw(self, fb, x, y, w, h),
+            App::Music => apps::music::draw(self, fb, x, y, w, h),
             App::Clock => apps::clock::draw(self, fb, x, y, w, h),
+            App::Settings => apps::settings::draw(self, fb, x, y, w, h),
         }
     }
 
@@ -374,13 +484,9 @@ impl Shell {
 
 // --- Vizual ikonalar ---
 
-/// App ikonasi: oddiy harf o'rniga app turiga mos kichik grafik.
-pub fn draw_app_icon(fb: &mut Framebuffer, app: App, x: u32, y: u32, fg: Color, scale: u32) {
-    let s = scale; // har piksel s × s
-    let g = |i: u32, j: u32| (x + i * s, y + j * s);
-
-    // Glyph 8x8 grid — sodda piktogrammalar.
-    let pattern: &[u8] = match app {
+/// App ikonasi 8x8 piktogramma (oq glyph).
+fn icon_pattern(app: App) -> &'static [u8; 8] {
+    match app {
         App::Welcome => &[
             0b00011000,
             0b00111100,
@@ -420,7 +526,7 @@ pub fn draw_app_icon(fb: &mut Framebuffer, app: App, x: u32, y: u32, fg: Color, 
             0b10000001,
             0b10111101,
             0b11111111,
-        ], // terminal box
+        ], // terminal
         App::Paint => &[
             0b00111100,
             0b01000010,
@@ -441,14 +547,193 @@ pub fn draw_app_icon(fb: &mut Framebuffer, app: App, x: u32, y: u32, fg: Color, 
             0b01000010,
             0b00111100,
         ], // clock
-    };
+        App::Calculator => &[
+            0b11111111,
+            0b10000001,
+            0b10111101,
+            0b10000001,
+            0b10101010,
+            0b10101010,
+            0b10101010,
+            0b11111111,
+        ], // calc grid
+        App::Files => &[
+            0b00111100,
+            0b01000110,
+            0b10000010,
+            0b10000010,
+            0b10000010,
+            0b10000010,
+            0b10000010,
+            0b11111110,
+        ], // folder
+        App::Music => &[
+            0b00011110,
+            0b00010010,
+            0b00010010,
+            0b00010010,
+            0b00010010,
+            0b01110010,
+            0b11110010,
+            0b11100000,
+        ], // music note
+        App::Settings => &[
+            0b00011000,
+            0b01011010,
+            0b00111100,
+            0b11100111,
+            0b11100111,
+            0b00111100,
+            0b01011010,
+            0b00011000,
+        ], // gear-ish
+    }
+}
 
+/// Zamonaviy rangli ikona: gradient rounded square + oq piktogramma.
+/// `size` — ikon yon tomoni piksellarda. Glyph markazlashtiriladi.
+pub fn draw_app_icon_modern(fb: &mut Framebuffer, app: App, x: u32, y: u32, size: u32) {
+    // Soya
+    fb.shadow_rect(x, y + 2, size, size, Color::rgb(0x00, 0x00, 0x06));
+    // Gradient fon
+    draw_round_gradient(fb, x, y, size, size, size / 5, app.tint_top(), app.tint_bottom());
+
+    // Glyph — markazda
+    let glyph_size = (size * 5 / 8).max(8);
+    let glyph_scale = (glyph_size / 8).max(1);
+    let glyph_w = 8 * glyph_scale;
+    let glyph_x = x + (size - glyph_w) / 2;
+    let glyph_y = y + (size - glyph_w) / 2;
+    let pattern = icon_pattern(app);
     for (row, byte) in pattern.iter().enumerate() {
         for col in 0..8u32 {
-            // High bit = leftmost (col 0)
             if byte & (1 << (7 - col)) != 0 {
-                let (px, py) = g(col, row as u32);
-                fb.fill_rect(px, py, s, s, fg);
+                fb.fill_rect(
+                    glyph_x + col * glyph_scale,
+                    glyph_y + row as u32 * glyph_scale,
+                    glyph_scale,
+                    glyph_scale,
+                    Color::WHITE,
+                );
+            }
+        }
+    }
+}
+
+/// Yumaloq burchakli vertikal gradient — radius bilan.
+fn draw_round_gradient(
+    fb: &mut Framebuffer,
+    x: u32, y: u32, w: u32, h: u32, r: u32,
+    top: Color, bottom: Color,
+) {
+    if w <= 2 * r || h <= 2 * r {
+        fb.vgradient(x, y, w, h, top, bottom);
+        return;
+    }
+    let (tr, tg, tb) = ((top.0 >> 16) & 0xff, (top.0 >> 8) & 0xff, top.0 & 0xff);
+    let (br, bg, bb) = ((bottom.0 >> 16) & 0xff, (bottom.0 >> 8) & 0xff, bottom.0 & 0xff);
+    let r_i = r as i32;
+    let r2 = r_i * r_i;
+
+    for j in 0..h {
+        let t = j as i32;
+        let total = (h - 1).max(1) as i32;
+        let red = (tr as i32 + (br as i32 - tr as i32) * t / total) as u32;
+        let grn = (tg as i32 + (bg as i32 - tg as i32) * t / total) as u32;
+        let blu = (tb as i32 + (bb as i32 - tb as i32) * t / total) as u32;
+        let c = Color((red << 16) | (grn << 8) | blu);
+
+        // Boshlang'ich/oxirgi piksel x — burchaklarda kichraytirilgan
+        let row_offset = if j < r {
+            // Yuqori burchak: dy = r - j, dx = sqrt(r^2 - dy^2)
+            let dy = (r - j) as i32;
+            let dx2 = r2 - dy * dy;
+            r_i - (isqrt(dx2 as u32) as i32).max(0)
+        } else if j >= h - r {
+            let dy = (j - (h - r - 1)) as i32;
+            let dx2 = r2 - dy * dy;
+            r_i - (isqrt(dx2.max(0) as u32) as i32).max(0)
+        } else {
+            0
+        };
+        let row_offset = row_offset.max(0) as u32;
+        if row_offset < w / 2 {
+            fb.fill_rect(x + row_offset, y + j, w - 2 * row_offset, 1, c);
+        }
+    }
+}
+
+fn isqrt(n: u32) -> u32 {
+    if n == 0 {
+        return 0;
+    }
+    let mut x = n;
+    let mut y = (x + 1) / 2;
+    while y < x {
+        x = y;
+        y = (x + n / x) / 2;
+    }
+    x
+}
+
+/// Mobile home screen — iOS uslubli app grid.
+/// `selected` — TAB bilan tanlangan app (yorqin highlight).
+pub fn draw_home_grid(fb: &mut Framebuffer, x: u32, y: u32, w: u32, h: u32, selected: App) {
+    // Sarlavha
+    fb.draw_text(x + 12, y + 4, "Home", Color::WHITE, 2);
+    fb.draw_text(x + 12, y + 24, "Tap an app", Color::MUTED, 1);
+
+    let grid_top = y + 50;
+    let cols: u32 = 3;
+    let rows: u32 = 2;
+    let icon = 64u32;
+    let h_gap = 12u32;
+    let v_gap = 24u32;
+    let total_w = cols * icon + (cols - 1) * h_gap;
+    let start_x = x + (w.saturating_sub(total_w)) / 2;
+
+    let apps = App::all();
+    for (idx, app) in apps.iter().enumerate() {
+        let r = (idx as u32) / cols;
+        let c = (idx as u32) % cols;
+        if r >= rows {
+            break;
+        }
+        let ix = start_x + c * (icon + h_gap);
+        let iy = grid_top + r * (icon + 22 + v_gap);
+
+        // Selection highlight ring
+        if *app == selected {
+            fb.round_rect(
+                ix.saturating_sub(4),
+                iy.saturating_sub(4),
+                icon + 8,
+                icon + 8,
+                14,
+                Color::rgb(0xff, 0xe0, 0x55),
+            );
+        }
+        draw_app_icon_modern(fb, *app, ix, iy, icon);
+        // Label
+        let lbl = app.label();
+        let lw = (lbl.len() as u32) * 8;
+        fb.draw_text(ix + (icon - lw) / 2, iy + icon + 6, lbl, Color::WHITE, 1);
+    }
+
+    // Page dots (bittagina sahifa)
+    let dot_y = y + h - 14;
+    let dot_x = x + w / 2;
+    fb.fill_circle(dot_x as i32, dot_y as i32, 3, Color::WHITE);
+    fb.fill_circle(dot_x as i32 + 14, dot_y as i32, 3, Color::rgb(0x55, 0x55, 0x66));
+}
+
+/// Eski oddiy ikon (glyph-only, single color) — backward compat uchun.
+pub fn draw_app_icon(fb: &mut Framebuffer, app: App, x: u32, y: u32, fg: Color, scale: u32) {
+    let pattern = icon_pattern(app);
+    for (row, byte) in pattern.iter().enumerate() {
+        for col in 0..8u32 {
+            if byte & (1 << (7 - col)) != 0 {
+                fb.fill_rect(x + col * scale, y + row as u32 * scale, scale, scale, fg);
             }
         }
     }

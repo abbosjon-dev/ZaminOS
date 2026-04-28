@@ -68,56 +68,67 @@ screenshot: build
 	MON="socat - UNIX-CONNECT:/tmp/zaminos-mon.sock"; \
 	sleep 2; \
 	echo "==> [01] desktop / Welcome"; \
-	echo "screendump $(DIST_DIR)/shot-01-desktop-welcome.ppm" | $$MON >/dev/null; \
-	sleep 0.3; \
-	echo "==> [02] desktop / SysMon"; \
+	echo "screendump $(DIST_DIR)/shot-01-desktop-welcome.ppm" | $$MON >/dev/null; sleep 0.3; \
+	echo "==> [02] desktop / Activity"; \
 	echo "sendkey tab" | $$MON >/dev/null; sleep 1.0; \
-	echo "screendump $(DIST_DIR)/shot-02-desktop-sysmon.ppm" | $$MON >/dev/null; \
-	sleep 0.3; \
-	echo "==> [03] desktop / Keyboard"; \
-	echo "sendkey tab" | $$MON >/dev/null; sleep 0.3; \
+	echo "screendump $(DIST_DIR)/shot-02-desktop-activity.ppm" | $$MON >/dev/null; sleep 0.3; \
+	echo "==> [03] desktop / Calculator"; \
+	echo "sendkey tab" | $$MON >/dev/null; sleep 0.4; \
+	for k in 1 2 j 3 4; do echo "sendkey $$k" | $$MON >/dev/null; sleep 0.1; done; \
+	echo "screendump $(DIST_DIR)/shot-03-desktop-calculator.ppm" | $$MON >/dev/null; sleep 0.3; \
+	echo "==> [04] desktop / Keyboard"; \
+	echo "sendkey tab" | $$MON >/dev/null; sleep 0.4; \
 	for k in s a l o m; do echo "sendkey $$k" | $$MON >/dev/null; sleep 0.15; done; \
-	echo "screendump $(DIST_DIR)/shot-03-desktop-keyboard.ppm" | $$MON >/dev/null; \
-	sleep 0.3; \
-	echo "==> [04] desktop / Terminal"; \
-	echo "sendkey tab" | $$MON >/dev/null; sleep 0.3; \
+	echo "screendump $(DIST_DIR)/shot-04-desktop-keyboard.ppm" | $$MON >/dev/null; sleep 0.3; \
+	echo "==> [05] desktop / Terminal"; \
+	echo "sendkey tab" | $$MON >/dev/null; sleep 0.4; \
 	for k in h e l p; do echo "sendkey $$k" | $$MON >/dev/null; sleep 0.1; done; \
 	echo "sendkey ret" | $$MON >/dev/null; sleep 0.3; \
 	for k in p s; do echo "sendkey $$k" | $$MON >/dev/null; sleep 0.1; done; \
 	echo "sendkey ret" | $$MON >/dev/null; sleep 0.3; \
-	echo "screendump $(DIST_DIR)/shot-04-desktop-terminal.ppm" | $$MON >/dev/null; \
-	sleep 0.3; \
-	echo "==> [05] desktop / Paint"; \
-	echo "sendkey tab" | $$MON >/dev/null; sleep 0.3; \
-	for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20; do \
-		echo "mouse_move 8 0" | $$MON >/dev/null; sleep 0.04; \
-	done; \
-	for i in 1 2 3 4 5 6 7 8 9 10 11 12; do \
-		echo "mouse_move 0 8" | $$MON >/dev/null; sleep 0.04; \
-	done; \
-	for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20; do \
-		echo "mouse_move -8 0" | $$MON >/dev/null; sleep 0.04; \
-	done; \
-	for i in 1 2 3 4 5 6 7 8 9 10 11 12; do \
-		echo "mouse_move 0 -8" | $$MON >/dev/null; sleep 0.04; \
-	done; \
-	echo "screendump $(DIST_DIR)/shot-05-desktop-paint.ppm" | $$MON >/dev/null; \
-	sleep 0.3; \
-	echo "==> [06] desktop / Clock"; \
-	echo "sendkey tab" | $$MON >/dev/null; sleep 1.5; \
-	echo "screendump $(DIST_DIR)/shot-06-desktop-clock.ppm" | $$MON >/dev/null; \
-	sleep 0.3; \
-	echo "==> [07] mobile / Clock (Esc bilan o'tish)"; \
+	echo "screendump $(DIST_DIR)/shot-05-desktop-terminal.ppm" | $$MON >/dev/null; sleep 0.3; \
+	echo "==> [06] desktop / Paint"; \
+	echo "sendkey tab" | $$MON >/dev/null; sleep 0.4; \
+	for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15; do echo "mouse_move 8 0" | $$MON >/dev/null; sleep 0.03; done; \
+	for i in 1 2 3 4 5 6 7 8 9 10 11 12; do echo "mouse_move 0 8" | $$MON >/dev/null; sleep 0.03; done; \
+	for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15; do echo "mouse_move -8 0" | $$MON >/dev/null; sleep 0.03; done; \
+	for i in 1 2 3 4 5 6 7 8 9 10 11 12; do echo "mouse_move 0 -8" | $$MON >/dev/null; sleep 0.03; done; \
+	echo "screendump $(DIST_DIR)/shot-06-desktop-paint.ppm" | $$MON >/dev/null; sleep 0.3; \
+	echo "==> [07] desktop / Files"; \
+	echo "sendkey tab" | $$MON >/dev/null; sleep 0.4; \
+	for k in j j j; do echo "sendkey $$k" | $$MON >/dev/null; sleep 0.1; done; \
+	echo "screendump $(DIST_DIR)/shot-07-desktop-files.ppm" | $$MON >/dev/null; sleep 0.3; \
+	echo "==> [08] desktop / Music"; \
+	echo "sendkey tab" | $$MON >/dev/null; sleep 0.4; \
+	echo "screendump $(DIST_DIR)/shot-08-desktop-music.ppm" | $$MON >/dev/null; sleep 0.3; \
+	echo "==> [09] desktop / Clock"; \
+	echo "sendkey tab" | $$MON >/dev/null; sleep 3.0; \
+	echo "screendump $(DIST_DIR)/shot-09-desktop-clock.ppm" | $$MON >/dev/null; sleep 0.5; \
+	echo "==> [10] desktop / Settings"; \
+	echo "sendkey tab" | $$MON >/dev/null; sleep 0.4; \
+	for k in 4 minus minus equal equal equal; do echo "sendkey $$k" | $$MON >/dev/null; sleep 0.08; done; \
+	echo "screendump $(DIST_DIR)/shot-10-desktop-settings.ppm" | $$MON >/dev/null; sleep 0.3; \
+	echo "==> [11] mobile / Home grid"; \
 	echo "sendkey esc" | $$MON >/dev/null; sleep 0.5; \
-	echo "screendump $(DIST_DIR)/shot-07-mobile-clock.ppm" | $$MON >/dev/null; \
-	sleep 0.3; \
-	echo "==> [08] mobile / Welcome"; \
-	echo "sendkey tab" | $$MON >/dev/null; sleep 0.5; \
-	echo "screendump $(DIST_DIR)/shot-08-mobile-welcome.ppm" | $$MON >/dev/null; \
-	sleep 0.3; \
+	echo "screendump $(DIST_DIR)/shot-11-mobile-home.ppm" | $$MON >/dev/null; sleep 0.3; \
+	echo "==> [12] mobile / Welcome InApp"; \
+	for i in 1 2 3 4 5 6 7 8 9; do echo "sendkey tab" | $$MON >/dev/null; sleep 0.08; done; \
+	echo "sendkey ret" | $$MON >/dev/null; sleep 0.6; \
+	echo "screendump $(DIST_DIR)/shot-12-mobile-welcome.ppm" | $$MON >/dev/null; sleep 0.3; \
+	echo "==> [13] mobile / Music InApp"; \
+	echo "sendkey f1" | $$MON >/dev/null; sleep 0.3; \
+	for i in 1 2 3 4 5 6 7; do echo "sendkey tab" | $$MON >/dev/null; sleep 0.08; done; \
+	echo "sendkey ret" | $$MON >/dev/null; sleep 0.6; \
+	echo "screendump $(DIST_DIR)/shot-13-mobile-music.ppm" | $$MON >/dev/null; sleep 0.3; \
+	echo "==> [14] mobile / Clock InApp"; \
+	echo "sendkey f1" | $$MON >/dev/null; sleep 0.3; \
+	for i in 1 2; do echo "sendkey tab" | $$MON >/dev/null; sleep 0.1; done; \
+	echo "sendkey ret" | $$MON >/dev/null; sleep 1.2; \
+	echo "screendump $(DIST_DIR)/shot-14-mobile-clock.ppm" | $$MON >/dev/null; sleep 0.3; \
 	kill $$QEMU_PID 2>/dev/null; \
 	wait $$QEMU_PID 2>/dev/null; true
 	@if command -v convert >/dev/null 2>&1; then \
+		rm -f $(DIST_DIR)/shot-*.png; \
 		for f in $(DIST_DIR)/shot-*.ppm; do convert $$f $${f%.ppm}.png; done; \
 		cp $(DIST_DIR)/shot-01-desktop-welcome.png $(DIST_DIR)/screenshot.png 2>/dev/null || true; \
 		ls -la $(DIST_DIR)/shot-*.png; \
