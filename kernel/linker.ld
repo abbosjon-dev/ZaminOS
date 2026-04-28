@@ -34,6 +34,8 @@ SECTIONS
 
     . = ALIGN(4K);
     __kernel_end = .;
+    /* Linux ARM64 image header `image_size` maydoni uchun absolyut qiymat. */
+    __image_size = __kernel_end - __kernel_start;
 
     /DISCARD/ : {
         *(.comment)

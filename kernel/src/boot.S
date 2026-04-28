@@ -5,7 +5,22 @@
 .section .text.boot, "ax"
 .global _start
 
+// ARM64 Linux kernel image header (Documentation/arm64/booting.rst).
+// Bu sarlavha QEMU va UTM ga binar Linux-uslubidagi aarch64 yadro
+// ekanligini bildiradi. Sarlavhasiz UTM SE "Linux Kernel" rejimida tanimaydi.
 _start:
+    b       primary_entry        // code0:  initial branch
+    .long   0                    // code1:  reserved
+    .quad   0                    // text_offset (yuklash manzilidan ofset)
+    .quad   __image_size         // image_size (linker hisoblaydi)
+    .quad   8                    // flags: LE + 4 KiB sahifalar
+    .quad   0                    // reserved
+    .quad   0                    // reserved
+    .quad   0                    // reserved
+    .ascii  "ARM\x64"            // magic: "ARM\x64"
+    .long   0                    // PE header offset (yo'q)
+
+primary_entry:
     // MPIDR_EL1[7:0] = CPU ID. Faqat 0-yadro davom etadi, qolganlari park qiladi.
     mrs     x0, mpidr_el1
     and     x0, x0, #0xff

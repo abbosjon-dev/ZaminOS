@@ -21,7 +21,11 @@ QEMU_MACHINE := -M virt -cpu cortex-a72 -smp 1 -m 512M
 QEMU_OUT     := -nographic -serial mon:stdio
 QEMU_OPTS    := $(QEMU_MACHINE) $(QEMU_OUT) -kernel $(KERNEL_ELF)
 
-.PHONY: all build release run debug clean objdump size
+DIST_DIR := dist
+IOS_ELF  := $(DIST_DIR)/zaminos-kernel.elf
+IOS_BIN  := $(DIST_DIR)/zaminos-kernel.bin
+
+.PHONY: all build release run debug clean objdump size bin ios
 
 all: build
 
@@ -46,5 +50,17 @@ objdump: build
 size: build
 	rust-size $(KERNEL_ELF)
 
+ios: release
+	@mkdir -p $(DIST_DIR)
+	cp target/$(TARGET)/release/kernel $(IOS_ELF)
+	rust-objcopy --strip-all -O binary $(IOS_ELF) $(IOS_BIN)
+	@echo
+	@echo "==> iOS / UTM SE artifactlari tayyor:"
+	@ls -lh $(IOS_ELF) $(IOS_BIN)
+	@echo
+	@echo "Sozlash bo'yicha qo'llanma:"
+	@echo "  $(DIST_DIR)/README-iOS.md"
+
 clean:
 	cargo clean
+	rm -rf $(DIST_DIR)/*.bin $(DIST_DIR)/*.elf

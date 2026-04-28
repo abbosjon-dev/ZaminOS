@@ -35,8 +35,18 @@ sudo apt install -y qemu-system-arm gcc-aarch64-linux-gnu binutils-aarch64-linux
 make build    # debug build
 make run      # QEMU virt da ishga tushirish
 make debug    # QEMU + gdb stub (port 1234)
+make ios      # iPhone (UTM SE) uchun image tayyorlash
 make clean
 ```
+
+### iPhone'da sinab ko'rish (UTM SE)
+
+```bash
+make ios
+# Natija: dist/zaminos-kernel.bin — UTM SE'ga yuklang
+```
+
+To'liq qo'llanma: [`dist/README-iOS.md`](dist/README-iOS.md)
 
 Chiqishi:
 

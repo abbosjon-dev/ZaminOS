@@ -5,3 +5,6 @@
 *.elf
 *.o
 .DS_Store
+
+# `dist/` papkasida faqat hujjatlar (README-iOS.md) commit qilinadi.
+# Build artifactlari (.bin, .elf) yuqoridagi qoidalar bilan istisno qilinadi.
