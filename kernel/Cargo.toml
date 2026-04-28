@@ -6,6 +6,9 @@ authors = ["ZaminOS"]
 description = "ZaminOS kernel — Rust, aarch64, mobile-first konvergent OS"
 
 [dependencies]
+aarch64-cpu = "9"
+tock-registers = "0.8"
+linked_list_allocator = "0.10"
 
 [[bin]]
 name = "kernel"
