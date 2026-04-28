@@ -18,14 +18,15 @@ KERNEL_BIN := target/$(TARGET)/$(PROFILE)/kernel.bin
 
 QEMU         := qemu-system-aarch64
 QEMU_MACHINE := -M virt -cpu cortex-a72 -smp 1 -m 512M
+QEMU_DEV     := -device ramfb
 QEMU_OUT     := -nographic -serial mon:stdio
-QEMU_OPTS    := $(QEMU_MACHINE) $(QEMU_OUT) -kernel $(KERNEL_ELF)
+QEMU_OPTS    := $(QEMU_MACHINE) $(QEMU_DEV) $(QEMU_OUT) -kernel $(KERNEL_ELF)
 
 DIST_DIR := dist
 IOS_ELF  := $(DIST_DIR)/zaminos-kernel.elf
 IOS_BIN  := $(DIST_DIR)/zaminos-kernel.bin
 
-.PHONY: all build release run debug clean objdump size bin ios
+.PHONY: all build release run debug clean objdump size bin ios screenshot
 
 all: build
 
@@ -49,6 +50,34 @@ objdump: build
 
 size: build
 	rust-size $(KERNEL_ELF)
+
+# Skrinshot olish: QEMU ni -display none va monitor socket bilan ishga tushirib,
+# bir necha sekunddan keyin `screendump` buyrug'ini yuborish, keyin PPM ni PNG ga
+# o'tkazish. Natijada dist/screenshot.png hosil bo'ladi.
+screenshot: build
+	@mkdir -p $(DIST_DIR)
+	@rm -f /tmp/zaminos-mon.sock $(DIST_DIR)/screenshot.ppm $(DIST_DIR)/screenshot.png
+	@echo "==> QEMU ni headless rejimda ishga tushirish..."
+	@$(QEMU) $(QEMU_MACHINE) $(QEMU_DEV) \
+		-display none \
+		-serial file:$(DIST_DIR)/serial.log \
+		-monitor unix:/tmp/zaminos-mon.sock,server,nowait \
+		-kernel $(KERNEL_ELF) & \
+	QEMU_PID=$$!; \
+	sleep 3; \
+	echo "==> screendump yuborish..."; \
+	echo "screendump $(DIST_DIR)/screenshot.ppm" | socat - UNIX-CONNECT:/tmp/zaminos-mon.sock; \
+	sleep 1; \
+	kill $$QEMU_PID 2>/dev/null; \
+	wait $$QEMU_PID 2>/dev/null; true
+	@if command -v convert >/dev/null 2>&1; then \
+		convert $(DIST_DIR)/screenshot.ppm $(DIST_DIR)/screenshot.png && \
+		echo "==> $(DIST_DIR)/screenshot.png ($$(stat -c %s $(DIST_DIR)/screenshot.png) bayt)"; \
+	else \
+		echo "==> $(DIST_DIR)/screenshot.ppm ($(DIST_DIR)/ ichida)"; \
+		echo "    PNG uchun: sudo apt install imagemagick"; \
+	fi
+	@echo "==> Serial log: $(DIST_DIR)/serial.log"
 
 ios: release
 	@mkdir -p $(DIST_DIR)

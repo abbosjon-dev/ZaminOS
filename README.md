@@ -2,16 +2,18 @@
 
 ARM **aarch64** chiplariga moʻljallangan, **Rust** tilida yozilayotgan operatsion tizim. Asosiy maqsad — **mobile-first**, lekin tashqi monitor + klaviatura + sichqoncha ulanganda **desktop** rejimida ishlay oladigan **konvergent** OS.
 
-> Holati: **Faza 0–1 yakunlandi.** Yadro QEMU `virt` mashinasida yuklanadi, PL011 UART orqali xabar chiqaradi.
+> Holati: **Faza 0–5 yakunlandi.** EL2→EL1, MMU, 4 MiB heap, exception vector + GICv2, generic timer, kooperativ scheduler, ramfb framebuffer (800×600 XRGB8888) va 8×8 font matn rendering.
+
+![ZaminOS boot screen](dist/screenshot.png)
 
 ## Yoʻl xaritasi
 
 - [x] **Faza 0** — Toolchain, skelet, QEMU virt boot
 - [x] **Faza 1** — PL011 UART, `println!` makros
-- [ ] **Faza 2** — MMU, sahifalash, heap allokator
-- [ ] **Faza 3** — GIC + generic timer (uzilishlar)
-- [ ] **Faza 4** — Scheduler / async executor
-- [ ] **Faza 5** — virtio-gpu framebuffer
+- [x] **Faza 2** — MMU (39-bit VA, 1 GiB blok identity map), 4 MiB heap allokator
+- [x] **Faza 3** — Exception vector, GICv2, ARM generic timer (1 Hz)
+- [x] **Faza 4** — Kooperativ scheduler (round-robin task'lar)
+- [x] **Faza 5** — ramfb framebuffer (800×600 XRGB8888), 8×8 font matn rendering
 - [ ] **Faza 6** — virtio-input (klaviatura, sichqoncha, touch)
 - [ ] **Faza 7** — Raspberry Pi 4/5 portlash
 - [ ] **Faza 8** — Userspace, ELF loader, syscalls
@@ -32,10 +34,11 @@ sudo apt install -y qemu-system-arm gcc-aarch64-linux-gnu binutils-aarch64-linux
 ## Qurish va ishga tushirish
 
 ```bash
-make build    # debug build
-make run      # QEMU virt da ishga tushirish
-make debug    # QEMU + gdb stub (port 1234)
-make ios      # iPhone (UTM SE) uchun image tayyorlash
+make build       # debug build
+make run         # QEMU virt da ishga tushirish (UART konsol)
+make debug       # QEMU + gdb stub (port 1234)
+make screenshot  # headless QEMU + framebuffer skrinshot (dist/screenshot.png)
+make ios         # iPhone (UTM SE) uchun image tayyorlash
 make clean
 ```
 

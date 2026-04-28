@@ -6,5 +6,7 @@
 *.o
 .DS_Store
 
-# `dist/` papkasida faqat hujjatlar (README-iOS.md) commit qilinadi.
+# `dist/` papkasida faqat hujjatlar va misol skrinshotlar commit qilinadi.
 # Build artifactlari (.bin, .elf) yuqoridagi qoidalar bilan istisno qilinadi.
+dist/screenshot.ppm
+dist/serial.log
