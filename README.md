@@ -2,11 +2,21 @@
 
 ARM **aarch64** chiplariga moʻljallangan, **Rust** tilida yozilayotgan operatsion tizim. Asosiy maqsad — **mobile-first**, lekin tashqi monitor + klaviatura + sichqoncha ulanganda **desktop** rejimida ishlay oladigan **konvergent** OS.
 
-> Holati: **Faza 0–6.5 yakunlandi.** Konvergent shell uch ta app bilan: Welcome, SysMon, Keyboard. TAB bilan almashtiriladi.
+> Holati: **Faza 0–7 yakunlandi.** To'liq konvergent shell — 6 ta app (Welcome, SysMon, Keyboard, Terminal, Paint, Clock), gradiyent fonlar, yumaloq panellar, vizual app ikonalari, status bar (wifi/batareya/soat). Esc bilan **Mobile** rejimga o'tish — telefon shakli, notch, dock.
 
-| Welcome | System Monitor | Keyboard |
+### Desktop rejimi
+
+| Welcome | SysMon | Keyboard |
 |---|---|---|
-| ![](dist/shot-1-welcome.png) | ![](dist/shot-2-sysmon.png) | ![](dist/shot-3-keyboard.png) |
+| ![](dist/shot-01-desktop-welcome.png) | ![](dist/shot-02-desktop-sysmon.png) | ![](dist/shot-03-desktop-keyboard.png) |
+| **Terminal** | **Paint** | **Clock** |
+| ![](dist/shot-04-desktop-terminal.png) | ![](dist/shot-05-desktop-paint.png) | ![](dist/shot-06-desktop-clock.png) |
+
+### Mobile rejimi (Esc bilan)
+
+| Mobile / Clock | Mobile / Welcome |
+|---|---|
+| ![](dist/shot-07-mobile-clock.png) | ![](dist/shot-08-mobile-welcome.png) |
 
 ## Yoʻl xaritasi
 
@@ -17,7 +27,8 @@ ARM **aarch64** chiplariga moʻljallangan, **Rust** tilida yozilayotgan operatsi
 - [x] **Faza 4** — Kooperativ scheduler (round-robin task'lar)
 - [x] **Faza 5** — ramfb framebuffer (800×600 XRGB8888), 8×8 font matn rendering
 - [x] **Faza 6** — virtio-input (klaviatura + tablet/sichqoncha), live event loop, dirty-flag redraw
-- [x] **Faza 6.5** — Konvergent shell: top bar + side launcher + main content area, 3 ta app (Welcome/SysMon/Keyboard), TAB bilan almashish
+- [x] **Faza 6.5** — Konvergent shell: top bar + side launcher + main content area, TAB bilan almashish
+- [x] **Faza 7** — 6 ta app: Welcome, SysMon (gauges), Keyboard (visual QWERTY), Terminal (REPL: help/echo/clear/ps/mem/uname/about), Paint (Bresenham strokes), Clock (analog dial). Mobile/Desktop layout (Esc bilan). Gradiyent wallpaper, yumaloq panellar, soyalar, real grafik app ikonalari, wifi/batareya status ikonalari.
 - [ ] **Faza 7** — Raspberry Pi 4/5 portlash
 - [ ] **Faza 8** — Userspace, ELF loader, syscalls
 - [ ] **Faza 9** — Adaptiv shell va GUI (mobile ↔ desktop konvergensiyasi)

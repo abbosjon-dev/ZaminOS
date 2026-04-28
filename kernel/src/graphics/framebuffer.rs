@@ -109,4 +109,69 @@ impl Framebuffer {
         let x = self.width.saturating_sub(text_w) / 2;
         self.draw_text(x, y, s, fg, scale);
     }
+
+    /// Vertikal gradiyent — yuqoridan pastga ranglar interpolatsiyasi.
+    pub fn vgradient(&mut self, x: u32, y: u32, w: u32, h: u32, top: Color, bottom: Color) {
+        if h == 0 {
+            return;
+        }
+        let (tr, tg, tb) = ((top.0 >> 16) & 0xff, (top.0 >> 8) & 0xff, top.0 & 0xff);
+        let (br, bg, bb) = ((bottom.0 >> 16) & 0xff, (bottom.0 >> 8) & 0xff, bottom.0 & 0xff);
+        for j in 0..h {
+            let t = j as i32;
+            let total = (h - 1).max(1) as i32;
+            let r = (tr as i32 + (br as i32 - tr as i32) * t / total) as u32;
+            let g = (tg as i32 + (bg as i32 - tg as i32) * t / total) as u32;
+            let b = (tb as i32 + (bb as i32 - tb as i32) * t / total) as u32;
+            let c = Color((r << 16) | (g << 8) | b);
+            self.fill_rect(x, y + j, w, 1, c);
+        }
+    }
+
+    /// Yumaloq burchakli to'rtburchak (taxminiy — burchaklarni 4 piksel kvadratdan kesadi).
+    pub fn round_rect(&mut self, x: u32, y: u32, w: u32, h: u32, r: u32, c: Color) {
+        if w <= 2 * r || h <= 2 * r {
+            self.fill_rect(x, y, w, h, c);
+            return;
+        }
+        // Asosiy uch qism: yuqori, markaz, pastki
+        self.fill_rect(x + r, y, w - 2 * r, h, c);
+        self.fill_rect(x, y + r, w, h - 2 * r, c);
+        // Burchaklar — disk to'ldirish
+        for cy_off in 0..r {
+            for cx_off in 0..r {
+                let dx = (r - cx_off) as i32;
+                let dy = (r - cy_off) as i32;
+                if dx * dx + dy * dy <= (r as i32) * (r as i32) {
+                    self.put(x + cx_off, y + cy_off, c);
+                    self.put(x + w - 1 - cx_off, y + cy_off, c);
+                    self.put(x + cx_off, y + h - 1 - cy_off, c);
+                    self.put(x + w - 1 - cx_off, y + h - 1 - cy_off, c);
+                }
+            }
+        }
+    }
+
+    /// Statvalar / shadow uchun yarim shaffof emulyatsiya — ko'p marta darken qilish.
+    /// Real alpha-blend yo'q, lekin chuqurroq ko'k ranggа qoplaydi.
+    pub fn shadow_rect(&mut self, x: u32, y: u32, w: u32, h: u32, alpha_dark: Color) {
+        // Soya — pastga va o'ngga 4 piksel ofsetda yarim aralash rang.
+        self.fill_rect(x + 4, y + 4, w, h, alpha_dark);
+    }
+
+    /// To'la disk (radius bo'yicha).
+    pub fn fill_circle(&mut self, cx: i32, cy: i32, r: u32, c: Color) {
+        let r2 = (r as i32) * (r as i32);
+        for j in -(r as i32)..=(r as i32) {
+            for i in -(r as i32)..=(r as i32) {
+                if i * i + j * j <= r2 {
+                    let px = cx + i;
+                    let py = cy + j;
+                    if px >= 0 && (px as u32) < self.width && py >= 0 && (py as u32) < self.height {
+                        self.put(px as u32, py as u32, c);
+                    }
+                }
+            }
+        }
+    }
 }

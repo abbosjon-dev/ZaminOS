@@ -74,7 +74,8 @@ pub fn draw(shell: &Shell, fb: &mut Framebuffer, x: u32, y: u32, w: u32, h: u32)
 
     // Canvas
     let cv_y = pal_y + pal_h + 2;
-    let cv_h = (y + h).saturating_sub(cv_y);
+    let hint_h = 16u32;
+    let cv_h = (y + h).saturating_sub(cv_y).saturating_sub(hint_h + 2);
     fb.fill_rect(x, cv_y, w, cv_h, Color::WHITE);
 
     // Stroke'larni chizish (klipping bilan)
