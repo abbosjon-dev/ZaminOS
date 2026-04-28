@@ -1,68 +1,63 @@
-//! System Monitor app — grafik gauges va statistikalar.
+//! System Monitor app — gauges va statistikalar.
 
 use alloc::format;
 
-use crate::graphics::framebuffer::{Color, Framebuffer};
+use crate::graphics::framebuffer::{Color, FontSize, Framebuffer};
 use crate::ui::Shell;
 
 pub fn draw(shell: &Shell, fb: &mut Framebuffer, x: u32, y: u32, w: u32, h: u32) {
     let big = w >= 500;
+    let title_size = if big { FontSize::Px32 } else { FontSize::Px24 };
+    fb.draw_text_aa(x + 20, y + 16, "System Activity", Color::ZAMIN_FG, title_size, true);
 
-    let title_scale = if big { 3 } else { 2 };
-    fb.draw_text(x + 16, y + 14, "System", Color::ZAMIN_FG, title_scale);
-    fb.draw_text(x + 16, y + 14 + (8 * title_scale + 4), "Monitor", Color::WHITE, title_scale);
-
-    // Gauges (heap, events, uptime)
-    let gauge_y = y + if big { 120 } else { 90 };
-    let gauge_h = 14u32;
+    let gauge_y = y + if big { 80 } else { 60 };
     let gauges = [
         ("Heap", shell.heap_used as u64, shell.heap_size.max(1) as u64, Color::SUCCESS),
         ("Events", shell.event_count as u64, 200, Color::ACCENT),
         ("Uptime", shell.uptime_ticks as u64, 60, Color::ZAMIN_FG),
     ];
 
-    let gx = x + 16;
-    let gw = w.saturating_sub(32);
+    let gx = x + 20;
+    let gw = w.saturating_sub(40);
+    let gh = if big { 14 } else { 10 };
+    let row_gap = if big { 26 } else { 22 };
     let mut gy = gauge_y;
     for (label, used, total, color) in gauges.iter() {
-        fb.draw_text(gx, gy, label, Color::WHITE, 1);
-        let bar_y = gy + 12;
-        fb.fill_rect(gx, bar_y, gw, gauge_h, Color::rgb(0x1a, 0x2a, 0x44));
+        fb.draw_text_aa(gx, gy, label, Color::WHITE, FontSize::Px16, true);
+
+        let detail = match *label {
+            "Heap" => format!("{} / {} KiB", *used / 1024, *total / 1024),
+            _ => format!("{} / {}", *used, *total),
+        };
+        let dw = Framebuffer::measure_text_aa(&detail, FontSize::Px16, false);
+        fb.draw_text_aa(gx + gw - dw, gy, &detail, Color::MUTED, FontSize::Px16, false);
+
+        let bar_y = gy + 22;
+        fb.round_rect(gx, bar_y, gw, gh, gh / 2, Color::rgb(0x1a, 0x2a, 0x44));
         let frac = if *total > 0 {
             ((*used).min(*total) * gw as u64 / *total) as u32
         } else {
             0
         };
         if frac > 0 {
-            fb.fill_rect(gx, bar_y, frac, gauge_h, *color);
+            fb.round_rect(gx, bar_y, frac, gh, gh / 2, *color);
         }
-        let detail = match *label {
-            "Heap" => format!("{} / {} KiB", *used / 1024, *total / 1024),
-            _ => format!("{} / {}", *used, *total),
-        };
-        fb.draw_text(
-            gx + gw - (detail.len() as u32) * 8 - 4,
-            gy,
-            &detail,
-            Color::MUTED,
-            1,
-        );
-        gy += gauge_h + 22;
+        gy += row_gap + gh;
     }
 
-    // Compact key:value list pastda
-    if h > gy - y + 80 {
+    if big && h > gy - y + 100 {
+        gy += 12;
         let info = [
-            ("Arch", "aarch64"),
-            ("CPU", "cortex-a72"),
-            ("Boot", "EL2 -> EL1"),
-            ("FB", "ramfb 800x600"),
+            ("Architecture", "aarch64"),
+            ("CPU", "cortex-a72 (QEMU virt)"),
+            ("Boot", "EL2 -> EL1 transition"),
+            ("Framebuffer", "ramfb 800x600 XRGB8888"),
+            ("Input", "virtio kbd + tablet + mouse"),
         ];
-        let mut iy = gy + 10;
         for (k, v) in info.iter() {
-            fb.draw_text(gx, iy, k, Color::ACCENT, 1);
-            fb.draw_text(gx + 80, iy, v, Color::WHITE, 1);
-            iy += 14;
+            fb.draw_text_aa(gx, gy, k, Color::ACCENT, FontSize::Px16, true);
+            fb.draw_text_aa(gx + 180, gy, v, Color::WHITE, FontSize::Px16, false);
+            gy += 22;
         }
     }
 }

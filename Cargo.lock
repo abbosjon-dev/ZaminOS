@@ -47,6 +47,7 @@ dependencies = [
  "aarch64-cpu",
  "font8x8",
  "linked_list_allocator",
+ "noto-sans-mono-bitmap",
  "tock-registers",
  "virtio-drivers",
 ]
@@ -74,6 +75,12 @@ name = "log"
 version = "0.4.29"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5e5032e24019045c762d3c0f28f5b6b8bbf38563a65908389bf7978758920897"
+
+[[package]]
+name = "noto-sans-mono-bitmap"
+version = "0.3.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f102c477fd4ec864c149803bf606ecc23bc9329602ec0f99073a728abf454abc"
 
 [[package]]
 name = "proc-macro2"

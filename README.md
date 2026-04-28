@@ -2,9 +2,9 @@
 
 ARM **aarch64** chiplariga moʻljallangan, **Rust** tilida yozilayotgan operatsion tizim. Asosiy maqsad — **mobile-first**, lekin tashqi monitor + klaviatura + sichqoncha ulanganda **desktop** rejimida ishlay oladigan **konvergent** OS.
 
-> Holati: **Faza 0–8 yakunlandi.** macOS-uslubli desktop (menu bar + window with traffic lights + bottom dock) va iOS-uslubli mobile (telefon shakli, notch, home grid, app icon dock). **10 ta app**: Welcome, Activity, Calculator, Keys, Terminal, Paint, Files, Music, Clock, Settings.
+> Holati: **Faza 0–9 yakunlandi.** **Antialiased** font (Noto Sans Mono 16-32px) bilan smooth zamonaviy UI: **Windows 11**-uslubli desktop (taskbar + Start menu + window with traffic lights), **Android**-uslubli mobile (widgetlar + dock + app drawer + bottom navigation). **10 ta app**.
 
-### Desktop rejimi (macOS uslubli)
+### Desktop (Windows 11 / Linux uslubli)
 
 | Welcome | Activity | Calculator |
 |---|---|---|
@@ -13,14 +13,16 @@ ARM **aarch64** chiplariga moʻljallangan, **Rust** tilida yozilayotgan operatsi
 | ![](dist/shot-04-desktop-keyboard.png) | ![](dist/shot-05-desktop-terminal.png) | ![](dist/shot-06-desktop-paint.png) |
 | **Files** | **Music** | **Clock** |
 | ![](dist/shot-07-desktop-files.png) | ![](dist/shot-08-desktop-music.png) | ![](dist/shot-09-desktop-clock.png) |
-| **Settings** | | |
-| ![](dist/shot-10-desktop-settings.png) | | |
+| **Settings** | **Start menu (F2)** | |
+| ![](dist/shot-10-desktop-settings.png) | ![](dist/shot-11-desktop-start.png) | |
 
-### Mobile rejimi (iOS uslubli, Esc bilan)
+### Mobile (Android uslubli, Esc bilan)
 
-| Home Screen | Welcome | Music | Clock |
+Yuqorida widgetli home screen, pastda 3 ta tezkor app + 9-nuqtali **Apps menu tugmasi**. Menu tugmasi (F2) bosilsa **App drawer** (4-ustunli grid). Pastda **Android navigation bar** (Back/Home/Recent).
+
+| Home (widgetlar) | App drawer (F2) | Music | Clock |
 |---|---|---|---|
-| ![](dist/shot-11-mobile-home.png) | ![](dist/shot-12-mobile-welcome.png) | ![](dist/shot-13-mobile-music.png) | ![](dist/shot-14-mobile-clock.png) |
+| ![](dist/shot-12-mobile-home.png) | ![](dist/shot-13-mobile-drawer.png) | ![](dist/shot-14-mobile-music.png) | ![](dist/shot-15-mobile-clock.png) |
 
 ## Yoʻl xaritasi
 
@@ -33,7 +35,8 @@ ARM **aarch64** chiplariga moʻljallangan, **Rust** tilida yozilayotgan operatsi
 - [x] **Faza 6** — virtio-input (klaviatura + tablet/sichqoncha), live event loop, dirty-flag redraw
 - [x] **Faza 6.5** — Konvergent shell: top bar + side launcher + main content area, TAB bilan almashish
 - [x] **Faza 7** — 6 ta app: Welcome, SysMon, Keyboard, Terminal, Paint, Clock. Mobile/Desktop layout. Gradient wallpaper, yumaloq panellar.
-- [x] **Faza 8** — Modernizatsiya: rangli gradient app ikonalar (iOS/macOS uslubli), macOS-uslubli desktop (menu bar + window with traffic lights + markazlashgan dock), iOS-uslubli mobile (telefon notch + home grid + dock). Yangi 4 ta app: **Calculator** (functional), **Files** (file browser), **Music** (player UI), **Settings** (toggles + sliders). Jami **10 app**.
+- [x] **Faza 8** — Rangli gradient app ikonalar, dock, traffic lights. 10 ta app.
+- [x] **Faza 9** — **Antialiased font** (`noto-sans-mono-bitmap` 16/20/24/32px grayscale) — terminal pixel ko'rinishidan zamonaviy smooth UI ga o'tish. Windows 11 desktop layout: taskbar + Start menu (Z tugmasi, search bar, pinned apps grid, user info, power), window controls. Android mobile layout: status bar, katta clock widget, weather widget, music widget, system widget; pastda dock (3 app + 9-dot menu tugmasi); App drawer (F2) 4-ustun grid + search; bottom navigation bar (Back/Home/Recent).
 - [ ] **Faza 7** — Raspberry Pi 4/5 portlash
 - [ ] **Faza 8** — Userspace, ELF loader, syscalls
 - [ ] **Faza 9** — Adaptiv shell va GUI (mobile ↔ desktop konvergensiyasi)

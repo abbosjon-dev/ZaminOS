@@ -8,6 +8,8 @@
 //!   bitta OS, ekran/qurilma o'lchamiga moslashadigan UI.
 
 pub mod apps;
+pub mod desktop;
+pub mod mobile;
 
 use alloc::format;
 use alloc::string::{String, ToString};
@@ -34,15 +36,26 @@ impl Layout {
 
 #[derive(Clone, Copy, PartialEq)]
 pub enum MobileView {
-    /// Home screen — app grid.
+    /// Home screen — widgetlar va dock.
     Home,
+    /// App drawer — barcha apps grid.
+    AppDrawer,
     /// App ichida.
     InApp,
+}
+
+#[derive(Clone, Copy, PartialEq)]
+pub enum DesktopView {
+    /// Asosiy ko'rinish — desktop wallpaper + widgetlar + open window.
+    Desktop,
+    /// Start menu ochiq.
+    StartMenu,
 }
 
 pub struct Shell {
     pub layout: Layout,
     pub mobile_view: MobileView,
+    pub desktop_view: DesktopView,
     pub current_app: App,
     pub uptime_ticks: u32,
     pub event_count: u32,
@@ -64,6 +77,7 @@ impl Shell {
         Self {
             layout: Layout::Desktop,
             mobile_view: MobileView::Home,
+            desktop_view: DesktopView::Desktop,
             current_app: App::Welcome,
             uptime_ticks: 0,
             event_count: 0,
@@ -98,22 +112,50 @@ impl Shell {
                     return true;
                 }
 
-                // F1 — mobile rejimda "Home" tugmasi (app grid'ga qaytish)
+                // F1 — mobile rejimda "Home" tugmasi
                 if code == 59 && self.layout == Layout::Mobile {
                     self.mobile_view = MobileView::Home;
                     return true;
                 }
 
-                // Mobile Home rejimi: Tab cikl, Enter ishga tushirish
-                if self.layout == Layout::Mobile && self.mobile_view == MobileView::Home {
+                // F2 — mobile App drawer (Android menu)
+                if code == 60 && self.layout == Layout::Mobile {
+                    self.mobile_view = MobileView::AppDrawer;
+                    return true;
+                }
+
+                // F2 — desktop Start menu toggle (Windows)
+                if code == 60 && self.layout == Layout::Desktop {
+                    self.desktop_view = match self.desktop_view {
+                        DesktopView::Desktop => DesktopView::StartMenu,
+                        DesktopView::StartMenu => DesktopView::Desktop,
+                    };
+                    return true;
+                }
+
+                // Mobile Home/AppDrawer: Tab cikl, Enter ishga tushirish
+                if self.layout == Layout::Mobile
+                    && (self.mobile_view == MobileView::Home || self.mobile_view == MobileView::AppDrawer)
+                {
                     if code == 15 {
-                        // TAB — keyingi app tanlash
                         self.current_app = self.current_app.next();
                         return true;
                     }
                     if code == 28 {
-                        // Enter — tanlangan appni ochish
                         self.mobile_view = MobileView::InApp;
+                        return true;
+                    }
+                    return false;
+                }
+
+                // Desktop StartMenu: Tab cikl, Enter ochish
+                if self.layout == Layout::Desktop && self.desktop_view == DesktopView::StartMenu {
+                    if code == 15 {
+                        self.current_app = self.current_app.next();
+                        return true;
+                    }
+                    if code == 28 {
+                        self.desktop_view = DesktopView::Desktop;
                         return true;
                     }
                     return false;
@@ -203,6 +245,11 @@ impl Shell {
     // -------------------- Desktop layout --------------------
 
     fn draw_desktop(&self, fb: &mut Framebuffer) {
+        // Windows 11 uslubli desktop
+        crate::ui::desktop::draw(self, fb);
+    }
+
+    fn draw_desktop_OLD(&self, fb: &mut Framebuffer) {
         let w = fb.width();
         let h = fb.height();
 
@@ -337,6 +384,11 @@ impl Shell {
     // -------------------- Mobile layout --------------------
 
     fn draw_mobile(&self, fb: &mut Framebuffer) {
+        // Android uslubli mobile
+        crate::ui::mobile::draw(self, fb);
+    }
+
+    fn draw_mobile_OLD(&self, fb: &mut Framebuffer) {
         let w = fb.width();
         let h = fb.height();
 
@@ -394,6 +446,7 @@ impl Shell {
         let dock_h = 76u32;
 
         match self.mobile_view {
+            MobileView::AppDrawer => {} // OLD layout doesn't render this — new mobile.rs does
             MobileView::Home => {
                 // Status'tan keyin to'g'ridan-to'g'ri grid
                 let grid_y = phone_y + 26;
@@ -458,6 +511,11 @@ impl Shell {
     }
 
     // -------------------- App dispatcher --------------------
+
+    /// Public dispatcher for desktop/mobile modules.
+    pub fn draw_app_into(&self, fb: &mut Framebuffer, x: u32, y: u32, w: u32, h: u32) {
+        self.draw_app(fb, x, y, w, h);
+    }
 
     fn draw_app(&self, fb: &mut Framebuffer, x: u32, y: u32, w: u32, h: u32) {
         match self.current_app {

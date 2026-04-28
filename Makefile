@@ -108,23 +108,26 @@ screenshot: build
 	echo "sendkey tab" | $$MON >/dev/null; sleep 0.4; \
 	for k in 4 minus minus equal equal equal; do echo "sendkey $$k" | $$MON >/dev/null; sleep 0.08; done; \
 	echo "screendump $(DIST_DIR)/shot-10-desktop-settings.ppm" | $$MON >/dev/null; sleep 0.3; \
-	echo "==> [11] mobile / Home grid"; \
+	echo "==> [11] desktop / Start menu"; \
+	echo "sendkey f2" | $$MON >/dev/null; sleep 0.5; \
+	echo "screendump $(DIST_DIR)/shot-11-desktop-start.ppm" | $$MON >/dev/null; sleep 0.3; \
+	echo "sendkey f2" | $$MON >/dev/null; sleep 0.3; \
+	echo "==> [12] mobile / Home (widgets)"; \
 	echo "sendkey esc" | $$MON >/dev/null; sleep 0.5; \
-	echo "screendump $(DIST_DIR)/shot-11-mobile-home.ppm" | $$MON >/dev/null; sleep 0.3; \
-	echo "==> [12] mobile / Welcome InApp"; \
-	for i in 1 2 3 4 5 6 7 8 9; do echo "sendkey tab" | $$MON >/dev/null; sleep 0.08; done; \
-	echo "sendkey ret" | $$MON >/dev/null; sleep 0.6; \
-	echo "screendump $(DIST_DIR)/shot-12-mobile-welcome.ppm" | $$MON >/dev/null; sleep 0.3; \
-	echo "==> [13] mobile / Music InApp"; \
+	echo "screendump $(DIST_DIR)/shot-12-mobile-home.ppm" | $$MON >/dev/null; sleep 0.3; \
+	echo "==> [13] mobile / App drawer"; \
+	echo "sendkey f2" | $$MON >/dev/null; sleep 0.5; \
+	echo "screendump $(DIST_DIR)/shot-13-mobile-drawer.ppm" | $$MON >/dev/null; sleep 0.3; \
+	echo "==> [14] mobile / Music InApp"; \
 	echo "sendkey f1" | $$MON >/dev/null; sleep 0.3; \
 	for i in 1 2 3 4 5 6 7; do echo "sendkey tab" | $$MON >/dev/null; sleep 0.08; done; \
 	echo "sendkey ret" | $$MON >/dev/null; sleep 0.6; \
-	echo "screendump $(DIST_DIR)/shot-13-mobile-music.ppm" | $$MON >/dev/null; sleep 0.3; \
-	echo "==> [14] mobile / Clock InApp"; \
+	echo "screendump $(DIST_DIR)/shot-14-mobile-music.ppm" | $$MON >/dev/null; sleep 0.3; \
+	echo "==> [15] mobile / Clock InApp"; \
 	echo "sendkey f1" | $$MON >/dev/null; sleep 0.3; \
 	for i in 1 2; do echo "sendkey tab" | $$MON >/dev/null; sleep 0.1; done; \
-	echo "sendkey ret" | $$MON >/dev/null; sleep 1.2; \
-	echo "screendump $(DIST_DIR)/shot-14-mobile-clock.ppm" | $$MON >/dev/null; sleep 0.3; \
+	echo "sendkey ret" | $$MON >/dev/null; sleep 2.5; \
+	echo "screendump $(DIST_DIR)/shot-15-mobile-clock.ppm" | $$MON >/dev/null; sleep 0.3; \
 	kill $$QEMU_PID 2>/dev/null; \
 	wait $$QEMU_PID 2>/dev/null; true
 	@if command -v convert >/dev/null 2>&1; then \

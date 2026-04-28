@@ -10,6 +10,7 @@ aarch64-cpu = "9"
 tock-registers = "0.8"
 linked_list_allocator = "0.10"
 font8x8 = { version = "0.3", default-features = false, features = ["unicode"] }
+noto-sans-mono-bitmap = { version = "0.3", default-features = false, features = ["regular", "bold", "size_16", "size_20", "size_24", "size_32", "unicode-basic-latin"] }
 virtio-drivers = "0.7"
 
 [[bin]]

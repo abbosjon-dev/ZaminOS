@@ -3,6 +3,35 @@
 //! Piksel formati XRGB8888 (LE u32): 0x00RRGGBB.
 
 use font8x8::UnicodeFonts;
+use noto_sans_mono_bitmap::{get_raster, FontWeight, RasterHeight, RasterizedChar};
+
+/// Antialiased font o'lchami.
+#[derive(Clone, Copy)]
+pub enum FontSize {
+    Px16,
+    Px20,
+    Px24,
+    Px32,
+}
+
+impl FontSize {
+    fn raster_height(self) -> RasterHeight {
+        match self {
+            FontSize::Px16 => RasterHeight::Size16,
+            FontSize::Px20 => RasterHeight::Size20,
+            FontSize::Px24 => RasterHeight::Size24,
+            FontSize::Px32 => RasterHeight::Size32,
+        }
+    }
+    pub fn height(self) -> u32 {
+        match self {
+            FontSize::Px16 => 16,
+            FontSize::Px20 => 20,
+            FontSize::Px24 => 24,
+            FontSize::Px32 => 32,
+        }
+    }
+}
 
 #[derive(Clone, Copy)]
 pub struct Color(pub u32);
@@ -48,6 +77,16 @@ impl Framebuffer {
         if x < self.width && y < self.height {
             self.pixels[(y * self.width + x) as usize] = c.0;
         }
+    }
+
+    #[inline]
+    pub fn raw_pixel(&self, idx: usize) -> u32 {
+        self.pixels[idx]
+    }
+
+    #[inline]
+    pub fn set_raw_pixel(&mut self, idx: usize, v: u32) {
+        self.pixels[idx] = v;
     }
 
     pub fn clear(&mut self, c: Color) {
@@ -108,6 +147,68 @@ impl Framebuffer {
         let text_w = (s.chars().count() as u32) * 8 * scale;
         let x = self.width.saturating_sub(text_w) / 2;
         self.draw_text(x, y, s, fg, scale);
+    }
+
+    /// Antialiased matn — Noto Sans Mono cratesidan grayscale glyphlarni
+    /// joriy fonga blend qilish orqali. Katta va smooth ko'rinadi.
+    pub fn draw_text_aa(&mut self, x: u32, y: u32, s: &str, fg: Color, size: FontSize, bold: bool) -> u32 {
+        let weight = if bold { FontWeight::Bold } else { FontWeight::Regular };
+        let mut cur_x = x;
+        for ch in s.chars() {
+            if let Some(glyph) = get_raster(ch, weight, size.raster_height()) {
+                self.blit_glyph(cur_x, y, &glyph, fg);
+                cur_x += glyph.width() as u32;
+            } else {
+                cur_x += size.height() / 2;
+            }
+        }
+        cur_x - x
+    }
+
+    /// Antialiased matn kengligini hisoblash (chizmasdan).
+    pub fn measure_text_aa(s: &str, size: FontSize, bold: bool) -> u32 {
+        let weight = if bold { FontWeight::Bold } else { FontWeight::Regular };
+        let mut w = 0u32;
+        for ch in s.chars() {
+            if let Some(glyph) = get_raster(ch, weight, size.raster_height()) {
+                w += glyph.width() as u32;
+            } else {
+                w += size.height() / 2;
+            }
+        }
+        w
+    }
+
+    /// Markazlashtirilgan AA matn.
+    pub fn draw_text_aa_centered(&mut self, cx: u32, y: u32, s: &str, fg: Color, size: FontSize, bold: bool) {
+        let w = Self::measure_text_aa(s, size, bold);
+        let x = cx.saturating_sub(w / 2);
+        self.draw_text_aa(x, y, s, fg, size, bold);
+    }
+
+    fn blit_glyph(&mut self, x: u32, y: u32, glyph: &RasterizedChar, fg: Color) {
+        let (fr, fg_, fb) = ((fg.0 >> 16) & 0xff, (fg.0 >> 8) & 0xff, fg.0 & 0xff);
+        for (j, row) in glyph.raster().iter().enumerate() {
+            for (i, intensity) in row.iter().enumerate() {
+                let intensity = *intensity as u32;
+                if intensity == 0 {
+                    continue;
+                }
+                let px = x + i as u32;
+                let py = y + j as u32;
+                if px >= self.width || py >= self.height {
+                    continue;
+                }
+                let idx = (py * self.width + px) as usize;
+                let bg = self.pixels[idx];
+                let (br, bg_, bb) = ((bg >> 16) & 0xff, (bg >> 8) & 0xff, bg & 0xff);
+                let inv = 255 - intensity;
+                let r = (br * inv + fr * intensity) / 255;
+                let g = (bg_ * inv + fg_ * intensity) / 255;
+                let b = (bb * inv + fb * intensity) / 255;
+                self.pixels[idx] = (r << 16) | (g << 8) | b;
+            }
+        }
     }
 
     /// Vertikal gradiyent — yuqoridan pastga ranglar interpolatsiyasi.
