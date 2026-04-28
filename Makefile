@@ -112,9 +112,12 @@ screenshot: build
 	echo "sendkey f2" | $$MON >/dev/null; sleep 0.5; \
 	echo "screendump $(DIST_DIR)/shot-11-desktop-start.ppm" | $$MON >/dev/null; sleep 0.3; \
 	echo "sendkey f2" | $$MON >/dev/null; sleep 0.3; \
-	echo "==> [12] mobile / Home (widgets)"; \
+	echo "==> [12a] mobile / Lock screen"; \
 	echo "sendkey esc" | $$MON >/dev/null; sleep 0.5; \
-	echo "screendump $(DIST_DIR)/shot-12-mobile-home.ppm" | $$MON >/dev/null; sleep 0.3; \
+	echo "screendump $(DIST_DIR)/shot-12-mobile-lock.ppm" | $$MON >/dev/null; sleep 0.3; \
+	echo "==> [12b] mobile / Home (widgets) — Enter unlocks"; \
+	echo "sendkey ret" | $$MON >/dev/null; sleep 0.5; \
+	echo "screendump $(DIST_DIR)/shot-12b-mobile-home.ppm" | $$MON >/dev/null; sleep 0.3; \
 	echo "==> [13] mobile / App drawer"; \
 	echo "sendkey f2" | $$MON >/dev/null; sleep 0.5; \
 	echo "screendump $(DIST_DIR)/shot-13-mobile-drawer.ppm" | $$MON >/dev/null; sleep 0.3; \

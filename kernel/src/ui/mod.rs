@@ -9,6 +9,7 @@
 
 pub mod apps;
 pub mod desktop;
+pub mod icons;
 pub mod mobile;
 
 use alloc::format;
@@ -36,6 +37,8 @@ impl Layout {
 
 #[derive(Clone, Copy, PartialEq)]
 pub enum MobileView {
+    /// Lock screen — boot oxirida ko'rinadi.
+    Lock,
     /// Home screen — widgetlar va dock.
     Home,
     /// App drawer — barcha apps grid.
@@ -76,7 +79,7 @@ impl Shell {
     pub fn new(width: u32, height: u32) -> Self {
         Self {
             layout: Layout::Desktop,
-            mobile_view: MobileView::Home,
+            mobile_view: MobileView::Lock,
             desktop_view: DesktopView::Desktop,
             current_app: App::Welcome,
             uptime_ticks: 0,
@@ -103,12 +106,18 @@ impl Shell {
                 }
                 self.event_count += 1;
 
-                // Esc — layout almashtirish
+                // Esc — layout almashtirish (mobile -> lock screen)
                 if code == 1 {
                     self.layout = self.layout.toggle();
                     if self.layout == Layout::Mobile {
-                        self.mobile_view = MobileView::Home;
+                        self.mobile_view = MobileView::Lock;
                     }
+                    return true;
+                }
+
+                // Mobile lock screen: Enter (yoki har qanday tugma) — Home'ga
+                if self.layout == Layout::Mobile && self.mobile_view == MobileView::Lock {
+                    self.mobile_view = MobileView::Home;
                     return true;
                 }
 
@@ -446,7 +455,7 @@ impl Shell {
         let dock_h = 76u32;
 
         match self.mobile_view {
-            MobileView::AppDrawer => {} // OLD layout doesn't render this — new mobile.rs does
+            MobileView::Lock | MobileView::AppDrawer => {} // new mobile.rs handles these
             MobileView::Home => {
                 // Status'tan keyin to'g'ridan-to'g'ri grid
                 let grid_y = phone_y + 26;

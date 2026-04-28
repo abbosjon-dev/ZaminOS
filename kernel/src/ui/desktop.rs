@@ -10,7 +10,8 @@ use alloc::format;
 
 use crate::graphics::framebuffer::{Color, FontSize, Framebuffer};
 use crate::ui::apps::App;
-use crate::ui::{draw_app_icon_modern, draw_battery_icon, draw_wifi_icon, DesktopView, Shell};
+use crate::ui::icons::draw_icon as draw_app_icon_modern;
+use crate::ui::{draw_battery_icon, draw_wifi_icon, DesktopView, Shell};
 
 const TASKBAR_H: u32 = 48;
 
@@ -40,40 +41,60 @@ pub fn draw(shell: &Shell, fb: &mut Framebuffer) {
 }
 
 fn draw_wallpaper(fb: &mut Framebuffer, w: u32, h: u32) {
-    // Windows 11 uslubli — ko'k/binafsha gradient
-    fb.vgradient(0, 0, w, h, Color::rgb(0x14, 0x1a, 0x3a), Color::rgb(0x06, 0x0a, 0x18));
-
-    // Accent diagonal gradient (rasm sifatida)
-    // Burchakdan yorqinroq spot
+    // Beautiful 3-stop gradient: deep purple -> blue -> dark teal
+    let stops = [
+        (0u32, Color::rgb(0x2a, 0x14, 0x52)),
+        (h / 2, Color::rgb(0x12, 0x1c, 0x4a)),
+        (h - 1, Color::rgb(0x05, 0x18, 0x2e)),
+    ];
     for j in 0..h {
-        for i in (0..w).step_by(3) {
-            let cx = (w as i32) * 3 / 4;
-            let cy = (h as i32) / 4;
-            let dx = i as i32 - cx;
-            let dy = j as i32 - cy;
+        let (top_y, top_c, bot_y, bot_c) = if j < h / 2 {
+            (stops[0].0, stops[0].1, stops[1].0, stops[1].1)
+        } else {
+            (stops[1].0, stops[1].1, stops[2].0, stops[2].1)
+        };
+        let span = (bot_y - top_y).max(1);
+        let t = (j - top_y) as i32;
+        let total = span as i32;
+        let (tr, tg, tb) = ((top_c.0 >> 16) & 0xff, (top_c.0 >> 8) & 0xff, top_c.0 & 0xff);
+        let (br, bg, bb) = ((bot_c.0 >> 16) & 0xff, (bot_c.0 >> 8) & 0xff, bot_c.0 & 0xff);
+        let r = (tr as i32 + (br as i32 - tr as i32) * t / total) as u32;
+        let g = (tg as i32 + (bg as i32 - tg as i32) * t / total) as u32;
+        let b = (tb as i32 + (bb as i32 - tb as i32) * t / total) as u32;
+        let c = Color((r << 16) | (g << 8) | b);
+        fb.fill_rect(0, j, w, 1, c);
+    }
+
+    // Abstract accent shapes — 3 ta katta shaffof doira (Bing/macOS Sonoma uslubli)
+    soft_blob(fb, (w as i32) * 4 / 5, (h as i32) / 4, 280, Color::rgb(0xff, 0x6e, 0x8b), 60);
+    soft_blob(fb, (w as i32) / 6, (h as i32) * 3 / 4, 220, Color::rgb(0x21, 0xb6, 0xa8), 50);
+    soft_blob(fb, (w as i32) / 2, (h as i32) / 2, 360, Color::rgb(0x5e, 0x35, 0xb1), 30);
+}
+
+/// Yumshoq doira blob — markazidan chetiga qarab alpha kamayadi (radial gradient).
+fn soft_blob(fb: &mut Framebuffer, cx: i32, cy: i32, r: i32, c: Color, max_alpha: u32) {
+    let r2 = r * r;
+    for j in (cy - r).max(0)..(cy + r).min(fb.height() as i32) {
+        for i in (cx - r).max(0)..(cx + r).min(fb.width() as i32) {
+            let dx = i - cx;
+            let dy = j - cy;
             let d2 = dx * dx + dy * dy;
-            if d2 < 250 * 250 {
-                let intensity = 250 * 250 - d2;
-                let alpha = (intensity / (250 * 250 / 30)).min(30) as u32;
-                if alpha > 0 {
-                    let idx = (j * w + i) as usize;
-                    let p = fb.raw_pixel(idx);
-                    let r = ((p >> 16) & 0xff).min(255 - alpha) + alpha;
-                    let g = ((p >> 8) & 0xff).min(255 - alpha) + alpha / 2;
-                    let b = (p & 0xff).min(255 - alpha) + alpha;
-                    fb.set_raw_pixel(idx, (r << 16) | (g << 8) | b);
-                }
+            if d2 < r2 {
+                let t = (r2 - d2) as u32 * max_alpha / r2 as u32;
+                fb.put_alpha(i as u32, j as u32, c, t);
             }
         }
     }
 }
 
 fn draw_app_window(shell: &Shell, fb: &mut Framebuffer, x: u32, y: u32, w: u32, h: u32) {
-    // Soya
-    fb.shadow_rect(x, y + 6, w, h, Color::rgb(0x00, 0x00, 0x06));
+    // Soya (kuchliroq, modern)
+    fb.shadow_rect(x, y + 8, w, h, Color::rgb(0x00, 0x00, 0x06));
+    fb.shadow_rect(x + 2, y + 12, w - 4, h - 4, Color::rgb(0x00, 0x00, 0x06));
 
-    // Tana
-    fb.round_rect(x, y, w, h, 12, Color::rgb(0x1a, 0x1f, 0x2e));
+    // Tana — yarim shaffof glass panel
+    fb.round_rect(x, y, w, h, 14, Color::rgb(0x14, 0x18, 0x28));
+    fb.blend_round_rect(x, y, w, h, 14, Color::rgb(0xff, 0xff, 0xff), 14);
 
     // Title bar
     let title_h = 36u32;
@@ -145,9 +166,9 @@ fn draw_widgets(shell: &Shell, fb: &mut Framebuffer, w: u32, _desktop_h: u32) {
 fn draw_taskbar(shell: &Shell, fb: &mut Framebuffer, w: u32, h: u32) {
     let y = h - TASKBAR_H;
 
-    // Taskbar fon (acrylic blur taqlid — to'q gradient)
-    fb.fill_rect(0, y, w, TASKBAR_H, Color::rgb(0x12, 0x16, 0x24));
-    fb.hline(0, y, w, Color::rgb(0x32, 0x38, 0x4a));
+    // Glass panel — yarim shaffof to'q
+    fb.blend_rect(0, y, w, TASKBAR_H, Color::rgb(0x08, 0x0c, 0x1e), 200);
+    fb.hline(0, y, w, Color::rgb(0x55, 0x5b, 0x80));
 
     // Markazlashgan dock — Start + 8 ta app
     let apps = App::all();

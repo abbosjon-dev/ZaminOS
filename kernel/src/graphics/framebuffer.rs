@@ -79,6 +79,99 @@ impl Framebuffer {
         }
     }
 
+    /// Alpha-blend bilan piksel qo'yish (alpha 0..255).
+    #[inline]
+    pub fn put_alpha(&mut self, x: u32, y: u32, c: Color, alpha: u32) {
+        if x >= self.width || y >= self.height {
+            return;
+        }
+        let idx = (y * self.width + x) as usize;
+        let bg = self.pixels[idx];
+        let (br, bg_, bb) = ((bg >> 16) & 0xff, (bg >> 8) & 0xff, bg & 0xff);
+        let (fr, fg_, fb_) = ((c.0 >> 16) & 0xff, (c.0 >> 8) & 0xff, c.0 & 0xff);
+        let inv = 255 - alpha;
+        let r = (br * inv + fr * alpha) / 255;
+        let g = (bg_ * inv + fg_ * alpha) / 255;
+        let b = (bb * inv + fb_ * alpha) / 255;
+        self.pixels[idx] = (r << 16) | (g << 8) | b;
+    }
+
+    /// Yarim shaffof to'rtburchak — glassmorphism uchun.
+    pub fn blend_rect(&mut self, x: u32, y: u32, w: u32, h: u32, c: Color, alpha: u32) {
+        let x_end = (x + w).min(self.width);
+        let y_end = (y + h).min(self.height);
+        for j in y..y_end {
+            for i in x..x_end {
+                self.put_alpha(i, j, c, alpha);
+            }
+        }
+    }
+
+    /// Yarim shaffof yumaloq panel.
+    pub fn blend_round_rect(&mut self, x: u32, y: u32, w: u32, h: u32, r: u32, c: Color, alpha: u32) {
+        if w <= 2 * r || h <= 2 * r {
+            self.blend_rect(x, y, w, h, c, alpha);
+            return;
+        }
+        self.blend_rect(x + r, y, w - 2 * r, h, c, alpha);
+        self.blend_rect(x, y + r, w, h - 2 * r, c, alpha);
+        for cy_off in 0..r {
+            for cx_off in 0..r {
+                let dx = (r - cx_off) as i32;
+                let dy = (r - cy_off) as i32;
+                if dx * dx + dy * dy <= (r as i32) * (r as i32) {
+                    self.put_alpha(x + cx_off, y + cy_off, c, alpha);
+                    self.put_alpha(x + w - 1 - cx_off, y + cy_off, c, alpha);
+                    self.put_alpha(x + cx_off, y + h - 1 - cy_off, c, alpha);
+                    self.put_alpha(x + w - 1 - cx_off, y + h - 1 - cy_off, c, alpha);
+                }
+            }
+        }
+    }
+
+    /// Anti-aliased to'la disk.
+    pub fn fill_circle_aa(&mut self, cx: i32, cy: i32, r: u32, c: Color) {
+        let r2 = (r as i32) * (r as i32);
+        let r_outer = (r + 1) as i32;
+        let r2_outer = r_outer * r_outer;
+        for j in -(r_outer)..=(r_outer) {
+            for i in -(r_outer)..=(r_outer) {
+                let d2 = i * i + j * j;
+                let px = cx + i;
+                let py = cy + j;
+                if px < 0 || (px as u32) >= self.width || py < 0 || (py as u32) >= self.height {
+                    continue;
+                }
+                if d2 <= r2 {
+                    self.put(px as u32, py as u32, c);
+                } else if d2 <= r2_outer {
+                    // Edge — alpha blend
+                    let alpha = ((r2_outer - d2) * 255 / (r2_outer - r2)).max(0).min(255) as u32;
+                    self.put_alpha(px as u32, py as u32, c, alpha);
+                }
+            }
+        }
+    }
+
+    /// Yumaloq disk halqa (chiziq sifatida).
+    pub fn ring(&mut self, cx: i32, cy: i32, r: u32, thickness: u32, c: Color) {
+        let r_in = r.saturating_sub(thickness);
+        let r_in2 = (r_in as i32) * (r_in as i32);
+        let r_out2 = (r as i32) * (r as i32);
+        for j in -(r as i32)..=(r as i32) {
+            for i in -(r as i32)..=(r as i32) {
+                let d2 = i * i + j * j;
+                if d2 >= r_in2 && d2 <= r_out2 {
+                    let px = cx + i;
+                    let py = cy + j;
+                    if px >= 0 && (px as u32) < self.width && py >= 0 && (py as u32) < self.height {
+                        self.put(px as u32, py as u32, c);
+                    }
+                }
+            }
+        }
+    }
+
     #[inline]
     pub fn raw_pixel(&self, idx: usize) -> u32 {
         self.pixels[idx]

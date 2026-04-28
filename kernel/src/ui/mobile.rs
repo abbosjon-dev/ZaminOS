@@ -10,9 +10,8 @@ use alloc::format;
 
 use crate::graphics::framebuffer::{Color, FontSize, Framebuffer};
 use crate::ui::apps::App;
-use crate::ui::{
-    draw_app_icon_modern, draw_battery_icon, draw_wifi_icon, MobileView, Shell,
-};
+use crate::ui::icons::draw_icon as draw_app_icon_modern;
+use crate::ui::{draw_battery_icon, draw_wifi_icon, MobileView, Shell};
 
 const PHONE_W: u32 = 360;
 const PHONE_H: u32 = 580;
@@ -56,6 +55,9 @@ pub fn draw(shell: &Shell, fb: &mut Framebuffer) {
 
     // Content + dock (view ga qarab)
     match shell.mobile_view {
+        MobileView::Lock => {
+            draw_lock_screen(shell, fb, px, py + 32, PHONE_W, PHONE_H - 32);
+        }
         MobileView::Home => {
             draw_home(shell, fb, px, py + 32, PHONE_W, PHONE_H - 32 - 84);
             draw_dock(shell, fb, px, py + PHONE_H - 84, PHONE_W);
@@ -97,34 +99,46 @@ fn draw_side_caption(shell: &Shell, fb: &mut Framebuffer, w: u32, _h: u32) {
 }
 
 fn draw_phone_wallpaper(fb: &mut Framebuffer, x: u32, y: u32, w: u32, h: u32) {
-    fb.vgradient(x, y, w, h, Color::rgb(0x1a, 0x14, 0x46), Color::rgb(0x06, 0x0c, 0x24));
-    // Diagonal accent (faint)
-    let cx = (x + w * 3 / 4) as i32;
-    let cy = (y + h / 4) as i32;
-    for r in 0..50 {
-        let alpha = 50 - r;
-        let _ = alpha;
+    // Multi-stop gradient: deep purple -> magenta -> blue
+    let stops = [
+        Color::rgb(0x4a, 0x14, 0x66),
+        Color::rgb(0x86, 0x1f, 0x82),
+        Color::rgb(0x1a, 0x1f, 0x6a),
+    ];
+    for j in 0..h {
+        let t = j * 1000 / h.max(1);
+        let (top, bot, local_t) = if t < 500 {
+            (stops[0], stops[1], t * 2)
+        } else {
+            (stops[1], stops[2], (t - 500) * 2)
+        };
+        let (tr, tg, tb) = ((top.0 >> 16) & 0xff, (top.0 >> 8) & 0xff, top.0 & 0xff);
+        let (br, bg, bb) = ((bot.0 >> 16) & 0xff, (bot.0 >> 8) & 0xff, bot.0 & 0xff);
+        let r = (tr as i32 + (br as i32 - tr as i32) * (local_t as i32) / 1000) as u32;
+        let g = (tg as i32 + (bg as i32 - tg as i32) * (local_t as i32) / 1000) as u32;
+        let b = (tb as i32 + (bb as i32 - tb as i32) * (local_t as i32) / 1000) as u32;
+        fb.fill_rect(x, y + j, w, 1, Color((r << 16) | (g << 8) | b));
     }
-    // Quick accent dot in upper right
-    for r in 0..80u32 {
-        let intensity = (80 - r) / 4;
-        if intensity == 0 { continue; }
-        for ang in 0..360 {
-            let theta = ang as f32 * 3.14159 / 180.0;
-            let dx = (r as f32 * cos(theta)) as i32;
-            let dy = (r as f32 * sin(theta)) as i32;
-            let px = cx + dx;
-            let py = cy + dy;
-            if px >= x as i32 && (px as u32) < x + w && py >= y as i32 && (py as u32) < y + h {
-                let idx = (py as u32 * fb.width() + px as u32) as usize;
-                let p = fb.raw_pixel(idx);
-                let r0 = (p >> 16) & 0xff;
-                let g0 = (p >> 8) & 0xff;
-                let b0 = p & 0xff;
-                let r1 = (r0 + intensity).min(255);
-                let g1 = (g0 + intensity / 2).min(255);
-                let b1 = (b0 + intensity).min(255);
-                fb.set_raw_pixel(idx, (r1 << 16) | (g1 << 8) | b1);
+
+    // Abstract blob shapes
+    soft_blob(fb,
+        (x + w * 2 / 3) as i32, (y + h / 4) as i32,
+        140, Color::rgb(0xff, 0x6b, 0xc7), 55);
+    soft_blob(fb,
+        (x + w / 4) as i32, (y + h * 2 / 3) as i32,
+        100, Color::rgb(0x42, 0xc8, 0xff), 45);
+}
+
+fn soft_blob(fb: &mut Framebuffer, cx: i32, cy: i32, r: i32, c: Color, max_alpha: u32) {
+    let r2 = r * r;
+    for j in (cy - r).max(0)..(cy + r).min(fb.height() as i32) {
+        for i in (cx - r).max(0)..(cx + r).min(fb.width() as i32) {
+            let dx = i - cx;
+            let dy = j - cy;
+            let d2 = dx * dx + dy * dy;
+            if d2 < r2 {
+                let t = (r2 - d2) as u32 * max_alpha / r2 as u32;
+                fb.put_alpha(i as u32, j as u32, c, t);
             }
         }
     }
@@ -155,6 +169,46 @@ fn draw_status_bar(fb: &mut Framebuffer, x: u32, y: u32, w: u32) {
     fb.draw_text_aa(sx, y + 6, "5G", Color::WHITE, FontSize::Px16, true);
 }
 
+fn draw_lock_screen(shell: &Shell, fb: &mut Framebuffer, x: u32, y: u32, w: u32, h: u32) {
+    // Katta vaqt
+    let total = shell.uptime_ticks;
+    let hh = (total / 3600) % 24;
+    let mm = (total / 60) % 60;
+    let time_str = alloc::format!("{:02}:{:02}", hh, mm);
+    fb.draw_text_aa_centered(x + w / 2, y + h / 5, &time_str, Color::WHITE, FontSize::Px32, true);
+    // Sana
+    fb.draw_text_aa_centered(x + w / 2, y + h / 5 + 60, "Dushanba, 28 Apr", Color::rgb(0xe0, 0xe0, 0xf0), FontSize::Px20, false);
+
+    // Bildirishnoma kartasi
+    let card_x = x + 16;
+    let card_y = y + h / 2;
+    let card_w = w - 32;
+    let card_h = 78u32;
+    fb.blend_round_rect(card_x, card_y, card_w, card_h, 16, Color::rgb(0x00, 0x00, 0x00), 110);
+    // Icon (Welcome)
+    crate::ui::icons::draw_icon(fb, crate::ui::apps::App::Welcome, card_x + 12, card_y + 12, 36);
+    fb.draw_text_aa(card_x + 60, card_y + 12, "ZaminOS", Color::WHITE, FontSize::Px16, true);
+    fb.draw_text_aa(card_x + 60, card_y + 30, "Sizni kutmoqda", Color::WHITE, FontSize::Px20, true);
+    fb.draw_text_aa(card_x + 60, card_y + 56, "Konvergent OS - bitta tizim, ikki shakl", Color::rgb(0xc8, 0xcc, 0xe0), FontSize::Px16, false);
+
+    // Qulfni ochish ko'rsatmasi
+    let unlock_y = y + h - 80;
+    fb.draw_text_aa_centered(x + w / 2, unlock_y, "Qulfni ochish", Color::WHITE, FontSize::Px20, true);
+    // Yuqoriga arrow (^)
+    let arr_cx = (x + w / 2) as i32;
+    let arr_y = (unlock_y + 30) as i32;
+    for i in 0..6i32 {
+        // Chap chiziq
+        if arr_cx - i >= 0 && arr_y - i >= 0 {
+            fb.put((arr_cx - i) as u32, (arr_y - i) as u32, Color::WHITE);
+        }
+        // O'ng chiziq
+        if arr_cx + i >= 0 && arr_y - i >= 0 {
+            fb.put((arr_cx + i) as u32, (arr_y - i) as u32, Color::WHITE);
+        }
+    }
+}
+
 fn draw_home(shell: &Shell, fb: &mut Framebuffer, x: u32, y: u32, w: u32, h: u32) {
     let pad = 16u32;
 
@@ -168,12 +222,12 @@ fn draw_home(shell: &Shell, fb: &mut Framebuffer, x: u32, y: u32, w: u32, h: u32
     let date_str = "Dushanba, 28 Apr";
     fb.draw_text_aa_centered(x + w / 2, clock_y + 38, date_str, Color::MUTED, FontSize::Px16, false);
 
-    // ---- Search bar ----
+    // ---- Search bar (glassmorphism) ----
     let sb_y = clock_y + 70;
-    fb.round_rect(x + pad, sb_y, w - 2 * pad, 36, 18, Color::rgb(0x18, 0x1f, 0x36));
-    fb.fill_circle((x + pad + 18) as i32, (sb_y + 18) as i32, 6, Color::rgb(0x80, 0x80, 0x90));
-    fb.fill_rect(x + pad + 22, sb_y + 21, 8, 2, Color::rgb(0x80, 0x80, 0x90));
-    fb.draw_text_aa(x + pad + 36, sb_y + 9, "Search...", Color::MUTED, FontSize::Px16, false);
+    fb.blend_round_rect(x + pad, sb_y, w - 2 * pad, 36, 18, Color::rgb(0x00, 0x00, 0x00), 100);
+    fb.ring((x + pad + 18) as i32, (sb_y + 18) as i32, 6, 2, Color::rgb(0xb0, 0xb6, 0xd0));
+    fb.fill_rect(x + pad + 22, sb_y + 21, 8, 2, Color::rgb(0xb0, 0xb6, 0xd0));
+    fb.draw_text_aa(x + pad + 36, sb_y + 9, "Search apps", Color::rgb(0xc8, 0xcc, 0xe0), FontSize::Px16, false);
 
     // ---- Weather widget (chap) + Music widget (o'ng) ----
     let wid_y = sb_y + 50;
@@ -213,11 +267,11 @@ fn draw_home(shell: &Shell, fb: &mut Framebuffer, x: u32, y: u32, w: u32, h: u32
         fb.fill_rect(cx as u32 - 3 + i / 2, cy as u32 - i, 1, 2 * i, Color::rgb(0xec, 0x40, 0x7a));
     }
 
-    // ---- Activity widget (pastda keng) ----
+    // ---- Activity widget (glassmorphism) ----
     let act_y = wid_y + wid_h + 16;
     let act_h = h.saturating_sub(act_y - y).saturating_sub(8);
     if act_h > 60 {
-        fb.round_rect(x + pad, act_y, w - 2 * pad, act_h.min(120), 16, Color::rgb(0x18, 0x1f, 0x36));
+        fb.blend_round_rect(x + pad, act_y, w - 2 * pad, act_h.min(120), 16, Color::rgb(0x00, 0x00, 0x00), 100);
         fb.draw_text_aa(x + pad + 12, act_y + 8, "Tizim", Color::WHITE, FontSize::Px16, true);
         // Heap mini progress
         let (size, used, _) = (shell.heap_size, shell.heap_used, 0u32);
@@ -241,7 +295,8 @@ fn draw_dock(shell: &Shell, fb: &mut Framebuffer, x: u32, y: u32, w: u32) {
     // Pastki dock — 3 ta dastlabki app + menu (Apps) tugmasi
     let pad = 16u32;
     let dock_h = 76u32;
-    fb.round_rect(x + pad, y, w - 2 * pad, dock_h, 22, Color::rgb(0x14, 0x1a, 0x2c));
+    // Glassmorphism dock
+    fb.blend_round_rect(x + pad, y, w - 2 * pad, dock_h, 22, Color::rgb(0x00, 0x00, 0x00), 130);
 
     let dock_apps = [App::Welcome, App::Music, App::Clock]; // 3 ta tezkor
     let icon = 48u32;
