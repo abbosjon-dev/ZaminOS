@@ -2,7 +2,7 @@
 
 ARM **aarch64** chiplariga moʻljallangan, **Rust** tilida yozilayotgan operatsion tizim. Asosiy maqsad — **mobile-first**, lekin tashqi monitor + klaviatura + sichqoncha ulanganda **desktop** rejimida ishlay oladigan **konvergent** OS.
 
-> Holati: **Faza 0–5 yakunlandi.** EL2→EL1, MMU, 4 MiB heap, exception vector + GICv2, generic timer, kooperativ scheduler, ramfb framebuffer (800×600 XRGB8888) va 8×8 font matn rendering.
+> Holati: **Faza 0–6 yakunlandi.** EL2→EL1, MMU, 4 MiB heap, exception vector + GICv2, generic timer, kooperativ scheduler, ramfb framebuffer (800×600 XRGB8888), 8×8 font matn rendering, va **virtio-input klaviatura/sichqoncha** (live event loop bilan).
 
 ![ZaminOS boot screen](dist/screenshot.png)
 
@@ -14,7 +14,7 @@ ARM **aarch64** chiplariga moʻljallangan, **Rust** tilida yozilayotgan operatsi
 - [x] **Faza 3** — Exception vector, GICv2, ARM generic timer (1 Hz)
 - [x] **Faza 4** — Kooperativ scheduler (round-robin task'lar)
 - [x] **Faza 5** — ramfb framebuffer (800×600 XRGB8888), 8×8 font matn rendering
-- [ ] **Faza 6** — virtio-input (klaviatura, sichqoncha, touch)
+- [x] **Faza 6** — virtio-input (klaviatura + tablet/sichqoncha), live event loop, dirty-flag redraw
 - [ ] **Faza 7** — Raspberry Pi 4/5 portlash
 - [ ] **Faza 8** — Userspace, ELF loader, syscalls
 - [ ] **Faza 9** — Adaptiv shell va GUI (mobile ↔ desktop konvergensiyasi)

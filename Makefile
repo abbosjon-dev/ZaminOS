@@ -18,7 +18,9 @@ KERNEL_BIN := target/$(TARGET)/$(PROFILE)/kernel.bin
 
 QEMU         := qemu-system-aarch64
 QEMU_MACHINE := -M virt -cpu cortex-a72 -smp 1 -m 512M
-QEMU_DEV     := -device ramfb
+QEMU_DEV     := -device ramfb \
+                -device virtio-keyboard-device \
+                -device virtio-tablet-device
 QEMU_OUT     := -nographic -serial mon:stdio
 QEMU_OPTS    := $(QEMU_MACHINE) $(QEMU_DEV) $(QEMU_OUT) -kernel $(KERNEL_ELF)
 
@@ -51,9 +53,8 @@ objdump: build
 size: build
 	rust-size $(KERNEL_ELF)
 
-# Skrinshot olish: QEMU ni -display none va monitor socket bilan ishga tushirib,
-# bir necha sekunddan keyin `screendump` buyrug'ini yuborish, keyin PPM ni PNG ga
-# o'tkazish. Natijada dist/screenshot.png hosil bo'ladi.
+# Skrinshot olish: QEMU ni headless ishga tushirib, klaviatura/sichqoncha
+# eventlarini monitor orqali yuborish, keyin screendump.
 screenshot: build
 	@mkdir -p $(DIST_DIR)
 	@rm -f /tmp/zaminos-mon.sock $(DIST_DIR)/screenshot.ppm $(DIST_DIR)/screenshot.png
@@ -64,18 +65,25 @@ screenshot: build
 		-monitor unix:/tmp/zaminos-mon.sock,server,nowait \
 		-kernel $(KERNEL_ELF) & \
 	QEMU_PID=$$!; \
-	sleep 3; \
-	echo "==> screendump yuborish..."; \
-	echo "screendump $(DIST_DIR)/screenshot.ppm" | socat - UNIX-CONNECT:/tmp/zaminos-mon.sock; \
+	sleep 2; \
+	echo "==> klaviatura: 'salom' yozish..."; \
+	for k in s a l o m; do \
+		echo "sendkey $$k" | socat - UNIX-CONNECT:/tmp/zaminos-mon.sock >/dev/null; \
+		sleep 0.2; \
+	done; \
+	echo "==> sichqonchani siljitish..."; \
+	echo "mouse_move 18000 12000" | socat - UNIX-CONNECT:/tmp/zaminos-mon.sock >/dev/null; \
 	sleep 1; \
+	echo "==> screendump yuborish..."; \
+	echo "screendump $(DIST_DIR)/screenshot.ppm" | socat - UNIX-CONNECT:/tmp/zaminos-mon.sock >/dev/null; \
+	sleep 0.5; \
 	kill $$QEMU_PID 2>/dev/null; \
 	wait $$QEMU_PID 2>/dev/null; true
 	@if command -v convert >/dev/null 2>&1; then \
 		convert $(DIST_DIR)/screenshot.ppm $(DIST_DIR)/screenshot.png && \
 		echo "==> $(DIST_DIR)/screenshot.png ($$(stat -c %s $(DIST_DIR)/screenshot.png) bayt)"; \
 	else \
-		echo "==> $(DIST_DIR)/screenshot.ppm ($(DIST_DIR)/ ichida)"; \
-		echo "    PNG uchun: sudo apt install imagemagick"; \
+		echo "==> $(DIST_DIR)/screenshot.ppm"; \
 	fi
 	@echo "==> Serial log: $(DIST_DIR)/serial.log"
 

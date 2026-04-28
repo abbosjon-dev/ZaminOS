@@ -10,6 +10,7 @@ aarch64-cpu = "9"
 tock-registers = "0.8"
 linked_list_allocator = "0.10"
 font8x8 = { version = "0.3", default-features = false, features = ["unicode"] }
+virtio-drivers = "0.7"
 
 [[bin]]
 name = "kernel"
