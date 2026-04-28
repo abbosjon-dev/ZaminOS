@@ -54,10 +54,10 @@ size: build
 	rust-size $(KERNEL_ELF)
 
 # Skrinshot olish: QEMU ni headless ishga tushirib, klaviatura/sichqoncha
-# eventlarini monitor orqali yuborish, keyin screendump.
+# eventlarini monitor orqali yuborib, har bir app ekranini rasmga olish.
 screenshot: build
 	@mkdir -p $(DIST_DIR)
-	@rm -f /tmp/zaminos-mon.sock $(DIST_DIR)/screenshot.ppm $(DIST_DIR)/screenshot.png
+	@rm -f /tmp/zaminos-mon.sock $(DIST_DIR)/shot-*.ppm $(DIST_DIR)/shot-*.png $(DIST_DIR)/screenshot.png
 	@echo "==> QEMU ni headless rejimda ishga tushirish..."
 	@$(QEMU) $(QEMU_MACHINE) $(QEMU_DEV) \
 		-display none \
@@ -65,25 +65,33 @@ screenshot: build
 		-monitor unix:/tmp/zaminos-mon.sock,server,nowait \
 		-kernel $(KERNEL_ELF) & \
 	QEMU_PID=$$!; \
+	MON="socat - UNIX-CONNECT:/tmp/zaminos-mon.sock"; \
 	sleep 2; \
-	echo "==> klaviatura: 'salom' yozish..."; \
+	echo "==> [1/3] Welcome ekran (boot oxiri)"; \
+	echo "screendump $(DIST_DIR)/shot-1-welcome.ppm" | $$MON >/dev/null; \
+	sleep 0.3; \
+	echo "==> [2/3] TAB -> SysMon ekran"; \
+	echo "sendkey tab" | $$MON >/dev/null; \
+	sleep 1.2; \
+	echo "screendump $(DIST_DIR)/shot-2-sysmon.ppm" | $$MON >/dev/null; \
+	sleep 0.3; \
+	echo "==> [3/3] TAB -> Keyboard, 'salom' yozish"; \
+	echo "sendkey tab" | $$MON >/dev/null; \
+	sleep 0.3; \
 	for k in s a l o m; do \
-		echo "sendkey $$k" | socat - UNIX-CONNECT:/tmp/zaminos-mon.sock >/dev/null; \
+		echo "sendkey $$k" | $$MON >/dev/null; \
 		sleep 0.2; \
 	done; \
-	echo "==> sichqonchani siljitish..."; \
-	echo "mouse_move 18000 12000" | socat - UNIX-CONNECT:/tmp/zaminos-mon.sock >/dev/null; \
-	sleep 1; \
-	echo "==> screendump yuborish..."; \
-	echo "screendump $(DIST_DIR)/screenshot.ppm" | socat - UNIX-CONNECT:/tmp/zaminos-mon.sock >/dev/null; \
+	echo "mouse_move 25000 14000" | $$MON >/dev/null; \
 	sleep 0.5; \
+	echo "screendump $(DIST_DIR)/shot-3-keyboard.ppm" | $$MON >/dev/null; \
+	sleep 0.3; \
 	kill $$QEMU_PID 2>/dev/null; \
 	wait $$QEMU_PID 2>/dev/null; true
 	@if command -v convert >/dev/null 2>&1; then \
-		convert $(DIST_DIR)/screenshot.ppm $(DIST_DIR)/screenshot.png && \
-		echo "==> $(DIST_DIR)/screenshot.png ($$(stat -c %s $(DIST_DIR)/screenshot.png) bayt)"; \
-	else \
-		echo "==> $(DIST_DIR)/screenshot.ppm"; \
+		for f in $(DIST_DIR)/shot-*.ppm; do convert $$f $${f%.ppm}.png; done; \
+		cp $(DIST_DIR)/shot-1-welcome.png $(DIST_DIR)/screenshot.png; \
+		ls -la $(DIST_DIR)/shot-*.png; \
 	fi
 	@echo "==> Serial log: $(DIST_DIR)/serial.log"
 

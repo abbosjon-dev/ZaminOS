@@ -17,6 +17,7 @@ mod graphics;
 mod memory;
 mod panic;
 mod task;
+mod ui;
 
 use graphics::framebuffer::{Color, Framebuffer};
 
@@ -106,11 +107,13 @@ pub extern "C" fn kernel_main() -> ! {
             drivers::ramfb::FB_HEIGHT,
         );
 
-        // --- Boot ekran (Faza 5 dan) ---
-        draw_boot_screen(&mut fb);
+        // IRQ larni yoqamiz — timer ticks UART ga chiqadi va shell uchun
+        // uptime hisoblagichi sifatida ishlaydi.
+        unsafe {
+            arch::aarch64::exceptions::enable_irqs();
+        }
 
-        // --- Faza 6 interaktiv panel ---
-        run_input_loop(&mut fb, &mut inputs);
+        run_shell(&mut fb, &mut inputs);
     } else {
         println!();
         println!("[boot] Faza 0-5 OK (framebuffer yo'q).");
@@ -120,6 +123,53 @@ pub extern "C" fn kernel_main() -> ! {
     }
 }
 
+fn run_shell(fb: &mut Framebuffer, inputs: &mut [drivers::input::Input]) -> ! {
+    let mut shell = ui::Shell::new(fb.width(), fb.height());
+    let (size, used, _free) = memory::heap::stats();
+    shell.heap_size = size;
+    shell.heap_used = used;
+
+    println!();
+    println!("[boot] Faza 0-6.5 OK. Shell ishga tushdi.");
+    println!();
+
+    let mut last_tick: u64 = 0;
+    shell.draw(fb);
+
+    loop {
+        let mut dirty = false;
+
+        // Input event'larini drain qilish.
+        for input in inputs.iter_mut() {
+            while let Some(ev) = input.pop_pending_event() {
+                if shell.handle_input(ev.event_type, ev.code, ev.value) {
+                    dirty = true;
+                }
+            }
+        }
+
+        // Soat va heap statistikalarini yangilash (har sekund).
+        let now = drivers::timer::ticks();
+        if now != last_tick {
+            last_tick = now;
+            shell.uptime_ticks = now as u32;
+            let (size, used, _) = memory::heap::stats();
+            shell.heap_size = size;
+            shell.heap_used = used;
+            dirty = true;
+        }
+
+        if dirty {
+            shell.draw(fb);
+        }
+
+        for _ in 0..5_000 {
+            core::hint::spin_loop();
+        }
+    }
+}
+
+#[allow(dead_code)]
 fn draw_boot_screen(fb: &mut Framebuffer) {
     let w = fb.width();
     let h = fb.height();
@@ -158,10 +208,14 @@ fn draw_boot_screen(fb: &mut Framebuffer) {
     fb.draw_text_centered(h - 30, "github.com/abbosjon-dev/ZaminOS", Color::MUTED, 1);
 }
 
+#[allow(dead_code)]
 const HUD_Y: u32 = 400;
+#[allow(dead_code)]
 const HUD_H: u32 = 170;
+#[allow(dead_code)]
 const TYPE_BUF_LEN: usize = 64;
 
+#[allow(dead_code)]
 fn run_input_loop(fb: &mut Framebuffer, inputs: &mut [drivers::input::Input]) -> ! {
     let w = fb.width();
 
@@ -233,6 +287,7 @@ fn run_input_loop(fb: &mut Framebuffer, inputs: &mut [drivers::input::Input]) ->
     }
 }
 
+#[allow(dead_code)]
 fn redraw_hud(
     fb: &mut Framebuffer,
     hud_x: u32,
@@ -260,6 +315,7 @@ fn redraw_hud(
     fb.draw_text(hud_x + 12, mouse_y, &info, Color::ACCENT, 2);
 }
 
+#[allow(dead_code)]
 fn erase_cursor(fb: &mut Framebuffer, x: i32, y: i32) {
     if x < 0 || y < 0 {
         return;
@@ -270,6 +326,7 @@ fn erase_cursor(fb: &mut Framebuffer, x: i32, y: i32) {
     fb.fill_rect(cx, cy.saturating_sub(5), 1, 11, Color::ZAMIN_BG);
 }
 
+#[allow(dead_code)]
 fn handle_event(
     ev_type: u16,
     code: u16,
@@ -320,6 +377,7 @@ fn handle_event(
     }
 }
 
+#[allow(dead_code)]
 fn draw_cursor(fb: &mut Framebuffer, x: i32, y: i32) {
     if x < 0 || y < 0 {
         return;

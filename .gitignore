@@ -8,5 +8,5 @@
 
 # `dist/` papkasida faqat hujjatlar va misol skrinshotlar commit qilinadi.
 # Build artifactlari (.bin, .elf) yuqoridagi qoidalar bilan istisno qilinadi.
-dist/screenshot.ppm
+dist/*.ppm
 dist/serial.log

@@ -2,9 +2,11 @@
 
 ARM **aarch64** chiplariga moʻljallangan, **Rust** tilida yozilayotgan operatsion tizim. Asosiy maqsad — **mobile-first**, lekin tashqi monitor + klaviatura + sichqoncha ulanganda **desktop** rejimida ishlay oladigan **konvergent** OS.
 
-> Holati: **Faza 0–6 yakunlandi.** EL2→EL1, MMU, 4 MiB heap, exception vector + GICv2, generic timer, kooperativ scheduler, ramfb framebuffer (800×600 XRGB8888), 8×8 font matn rendering, va **virtio-input klaviatura/sichqoncha** (live event loop bilan).
+> Holati: **Faza 0–6.5 yakunlandi.** Konvergent shell uch ta app bilan: Welcome, SysMon, Keyboard. TAB bilan almashtiriladi.
 
-![ZaminOS boot screen](dist/screenshot.png)
+| Welcome | System Monitor | Keyboard |
+|---|---|---|
+| ![](dist/shot-1-welcome.png) | ![](dist/shot-2-sysmon.png) | ![](dist/shot-3-keyboard.png) |
 
 ## Yoʻl xaritasi
 
@@ -15,6 +17,7 @@ ARM **aarch64** chiplariga moʻljallangan, **Rust** tilida yozilayotgan operatsi
 - [x] **Faza 4** — Kooperativ scheduler (round-robin task'lar)
 - [x] **Faza 5** — ramfb framebuffer (800×600 XRGB8888), 8×8 font matn rendering
 - [x] **Faza 6** — virtio-input (klaviatura + tablet/sichqoncha), live event loop, dirty-flag redraw
+- [x] **Faza 6.5** — Konvergent shell: top bar + side launcher + main content area, 3 ta app (Welcome/SysMon/Keyboard), TAB bilan almashish
 - [ ] **Faza 7** — Raspberry Pi 4/5 portlash
 - [ ] **Faza 8** — Userspace, ELF loader, syscalls
 - [ ] **Faza 9** — Adaptiv shell va GUI (mobile ↔ desktop konvergensiyasi)
